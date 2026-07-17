@@ -34,29 +34,24 @@ function DesignEditor() {
   const canvasWidth = orientation === 'landscape' ? 1123 : 794;
   const canvasHeight = orientation === 'landscape' ? 794 : 1123;
 
-  // PERBAIKAN: Logika Resize yang lebih ketat untuk HP & Sidebar
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const updateScale = () => {
         if (!containerRef.current) return;
-        // Padding p-4 (HP) = 32px total, md:p-8 (Laptop) = 64px total
         const padding = window.innerWidth < 768 ? 32 : 64;
         const availableWidth = containerRef.current.clientWidth - padding;
         const newScale = availableWidth / canvasWidth;
-        
-        // Kunci rasio maksimal ke 100% (tidak over-zoom)
         setScale(newScale < 1 ? newScale : 1);
     };
 
     const resizeObserver = new ResizeObserver(() => {
-        // requestAnimationFrame memastikan UI tidak patah-patah saat resize
         window.requestAnimationFrame(updateScale);
     });
 
     resizeObserver.observe(container);
-    updateScale(); // Jalankan sekali saat pertama kali render
+    updateScale(); 
 
     return () => {
         resizeObserver.disconnect();
@@ -161,20 +156,17 @@ function DesignEditor() {
             </div>
         </div>
 
-        {/* PERBAIKAN: Dihilangkan class flex justify-center, menggunakan block layout standar */}
         <div ref={containerRef} className="flex-1 overflow-auto p-4 md:p-8 bg-slate-200/50">
             
-            {/* Pembungkus fisik kanvas: Kunci posisi ke margin auto (tengah) dan hindari melar (shrink-0) */}
             <div 
                 style={{ 
                     width: `${canvasWidth * scale}px`, 
                     height: `${canvasHeight * scale}px`,
                     position: 'relative',
-                    margin: '0 auto' // Memusatkan konten secara aman meski sedang di-zoom
+                    margin: '0 auto' 
                 }}
                 className="shrink-0" 
             >
-                {/* Visual Kanvas Sesungguhnya */}
                 <div 
                     className="border border-slate-300 bg-white shadow-2xl overflow-hidden rounded-md shrink-0" 
                     style={{ 
@@ -217,7 +209,17 @@ function DesignEditor() {
                             <Resizable width={items.qr.w} height={items.qr.h} onResize={onResize('qr')}>
                                 <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 flex flex-col items-center justify-center relative" style={{width: items.qr.w, height: items.qr.h}}>
                                     <div className="pointer-events-none flex flex-col items-center justify-center h-full w-full">
-                                        <QRCodeSVG value="https://mahatma.id/verify" size={items.qr.w * 0.7} />
+                                        <QRCodeSVG 
+                                            value="https://mahatma.id/verify" 
+                                            size={items.qr.w * 0.7} 
+                                            fgColor="#0f172a"
+                                            imageSettings={{
+                                                src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
+                                                height: (items.qr.w * 0.7) * 0.25,
+                                                width: (items.qr.w * 0.7) * 0.25,
+                                                excavate: true,
+                                            }}
+                                        />
                                         <span style={{fontSize: items.qr.h * 0.15}} className="font-bold text-slate-900 mt-1">QR Code</span>
                                     </div>
                                 </div>

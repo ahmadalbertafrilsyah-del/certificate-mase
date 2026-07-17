@@ -3,7 +3,10 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import { toPng } from 'html-to-image';
+// PERBAIKAN: Menggunakan toJpeg agar ukuran file jauh lebih kecil dan tidak memicu error server saat kirim email
+import { toJpeg } from 'html-to-image'; 
+import { renderToString } from 'react-dom/server';
+import { QRCodeSVG } from 'qrcode.react';
 import { db } from '@/lib/firebase'; 
 import { collection, addDoc, getDocs, writeBatch, doc, query, where } from 'firebase/firestore';
 
@@ -15,7 +18,6 @@ export default function AdminCertificates() {
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Tambahkan signerName dan signerTitle pada state form
   const [form, setForm] = useState({ name: '', serviceId: '', date: '', location: '', signerName: '', signerTitle: '' });
 
   const fetchData = async () => {
@@ -122,6 +124,24 @@ export default function AdminCertificates() {
           const certIdPos = config.positions.certId;
           const qrPos = config.positions.qr;
 
+          const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}`;
+          const qrSize = (qrPos.w || 120) * 0.7;
+          
+          // Render QR Code SVG menjadi string statis agar tiap peserta mendapatkan QR Code unik yang presisi
+          const qrSvg = renderToString(
+             <QRCodeSVG
+                 value={qrLink}
+                 size={qrSize}
+                 fgColor="#0f172a"
+                 imageSettings={{
+                     src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
+                     height: qrSize * 0.25,
+                     width: qrSize * 0.25,
+                     excavate: true,
+                 }}
+             />
+          );
+
           hiddenContainer.innerHTML = `
             <div id="cert-render-${i}" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: 100% 100%; background-repeat: no-repeat; position: relative;">
               <div style="position: absolute; left: ${namePos.x}px; top: ${namePos.y}px; width: ${namePos.w || 400}px; height: ${namePos.h || 60}px; display: flex; align-items: center; justify-content: center;">
@@ -130,22 +150,24 @@ export default function AdminCertificates() {
               <div style="position: absolute; left: ${certIdPos.x}px; top: ${certIdPos.y}px; width: ${certIdPos.w || 200}px; height: ${certIdPos.h || 30}px; display: flex; align-items: center; justify-content: center;">
                 <p style="font-size: ${(certIdPos.h || 30) * 0.8}px; margin: 0; font-weight: bold; color: #1e293b; white-space: nowrap;">No: ${p.certId}</p>
               </div>
-              <div style="position: absolute; left: ${qrPos.x}px; top: ${qrPos.y}px; width: ${qrPos.w || 120}px; height: ${qrPos.h || 120}px; display: flex; align-items: center; justify-content: center;">
-                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: contain;" />
+              <div style="position: absolute; left: ${qrPos.x}px; top: ${qrPos.y}px; width: ${qrPos.w || 120}px; height: ${qrPos.h || 120}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                 ${qrSvg}
+                 <span style="font-size: ${(qrPos.h || 120) * 0.15}px; font-weight: bold; font-family: sans-serif; color: #0f172a; margin-top: 4px;">SCAN ME</span>
               </div>
             </div>
           `;
 
           const elementToRender = document.getElementById(`cert-render-${i}`);
-          // Optimasi kualitas gambar agar ukuran base64 tidak terlalu besar dan memicu error server
-          const dataUrl = await toPng(elementToRender, { quality: 0.8, pixelRatio: 1.5 });
+          
+          // toJpeg dan pixelRatio: 1.0 menurunkan ukuran file hingga 80% untuk mengamankan pengiriman email
+          const dataUrl = await toJpeg(elementToRender, { quality: 0.8, pixelRatio: 1.0 });
           
           const pdfFormat = isLandscape ? 'landscape' : 'portrait';
           const pdfWidth = isLandscape ? 297 : 210;
           const pdfHeight = isLandscape ? 210 : 297;
           
           const pdf = new jsPDF({ orientation: pdfFormat, unit: 'mm', format: 'a4' });
-          pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
 
           if (p.email) {
               const pdfBase64 = pdf.output('datauristring');
@@ -168,7 +190,6 @@ export default function AdminCertificates() {
                   pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
                   failCount++;
               }
-              // Tambahkan jeda 1 detik per email agar sistem SMTP tidak menganggapnya sebagai spam
               await new Promise(resolve => setTimeout(resolve, 1000));
           } else {
               pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
@@ -262,7 +283,6 @@ export default function AdminCertificates() {
                         <input type="text" required value={form.location} onChange={e=>setForm({...form, location: e.target.value})} className="w-full border-2 border-slate-100 p-3.5 rounded-md focus:border-emerald-500 outline-none text-sm bg-slate-50" placeholder="Zoom Meeting / Gedung Universitas..." />
                     </div>
                     
-                    {/* BAGIAN TANDA TANGAN ELEKTRONIK */}
                     <div className="md:col-span-2 mt-4 pt-6 border-t border-slate-100">
                         <h4 className="font-bold text-sm text-slate-900 mb-4">Informasi Penandatanganan Elektronik (Penerbit)</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

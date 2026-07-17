@@ -4,8 +4,6 @@ import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firesto
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
-import jsPDF from 'jspdf';
-import { toPng } from 'html-to-image';
 
 export default function VerifyPage({ params }) {
   const resolvedParams = use(params);
@@ -13,7 +11,6 @@ export default function VerifyPage({ params }) {
   
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [liveTime, setLiveTime] = useState('');
   
   const containerRef = useRef(null);
@@ -71,59 +68,6 @@ export default function VerifyPage({ params }) {
     }
   }, [data]);
 
-  const handleDownloadPDF = async () => {
-    if (!data.event?.design) return alert("Desain sertifikat belum tersedia.");
-    setIsDownloading(true);
-
-    const config = data.event.design;
-    const isLandscape = config.orientation !== 'portrait';
-    const canvasWidth = isLandscape ? 1123 : 794;
-    const canvasHeight = isLandscape ? 794 : 1123;
-    const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`;
-
-    const hiddenContainer = document.createElement('div');
-    hiddenContainer.style.position = 'absolute';
-    hiddenContainer.style.top = '-9999px';
-    hiddenContainer.style.left = '-9999px';
-    document.body.appendChild(hiddenContainer);
-
-    hiddenContainer.innerHTML = `
-      <div id="cert-render-pdf" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: cover; background-repeat: no-repeat; position: relative;">
-        <div style="position: absolute; left: ${config.positions.name.x}px; top: ${config.positions.name.y}px;">
-          <h2 style="font-size: 54px; margin: 0; font-weight: bold; color: #0f172a; white-space: nowrap;">${data.name}</h2>
-        </div>
-        <div style="position: absolute; left: ${config.positions.certId.x}px; top: ${config.positions.certId.y}px;">
-          <p style="font-size: 20px; margin: 0; font-weight: bold; color: #1e293b; white-space: nowrap;">No: ${certId}</p>
-        </div>
-        <div style="position: absolute; left: ${config.positions.qr.x}px; top: ${config.positions.qr.y}px; width: 120px; height: 120px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-           <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrLink)}" style="width: 100px; height: 100px;" alt="QR" />
-           <span style="font-size: 10px; font-weight: bold; font-family: sans-serif; color: #0f172a; margin-top: 4px;">SCAN ME</span>
-        </div>
-      </div>
-    `;
-
-    try {
-      const elementToRender = document.getElementById('cert-render-pdf');
-      const dataUrl = await toPng(elementToRender, { quality: 1.0, pixelRatio: 2 });
-      
-      const pdfFormat = isLandscape ? 'landscape' : 'portrait';
-      const pdfWidth = isLandscape ? 297 : 210;
-      const pdfHeight = isLandscape ? 210 : 297;
-      
-      const pdf = new jsPDF({ orientation: pdfFormat, unit: 'mm', format: 'a4' });
-      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      
-      const safeName = data.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      pdf.save(`Sertifikat_${safeName}.pdf`);
-    } catch (err) {
-      console.error("Gagal mendownload PDF", err);
-      alert("Terjadi kesalahan saat mengunduh sertifikat.");
-    } finally {
-      document.body.removeChild(hiddenContainer);
-      setIsDownloading(false);
-    }
-  };
-
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center">
         <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-md animate-spin mb-4"></div>
@@ -162,7 +106,6 @@ export default function VerifyPage({ params }) {
         
         <div className="p-6 md:p-10">
           
-          {/* TABEL DATA SERTIFIKAT */}
           <div className="mb-10">
              <h3 className="text-lg font-black text-slate-900 mb-4 border-b border-slate-200 pb-2">Informasi Dokumen</h3>
              <div className="border border-slate-200 rounded-md overflow-hidden">
@@ -193,7 +136,6 @@ export default function VerifyPage({ params }) {
              </div>
           </div>
 
-          {/* KETERANGAN PENANDATANGANAN ELEKTRONIK */}
           <div className="mb-10 bg-blue-50 border border-blue-100 rounded-md p-6 flex flex-col md:flex-row items-center gap-6">
               <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl shrink-0 shadow-md">
                  ✒️
@@ -226,15 +168,25 @@ export default function VerifyPage({ params }) {
                          transform: `scale(${scale})` 
                        }}
                      >
-                        <div style={{ position: 'absolute', left: `${design.positions.name.x}px`, top: `${design.positions.name.y}px` }}>
-                            <h2 className="text-[54px] leading-none font-bold text-slate-900 whitespace-nowrap drop-shadow-sm">{data.name}</h2>
+                        <div style={{ position: 'absolute', left: `${design.positions.name.x}px`, top: `${design.positions.name.y}px`, width: `${design.positions.name.w}px`, height: `${design.positions.name.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <h2 style={{ fontSize: `${design.positions.name.h * 0.8}px`, margin: 0, fontWeight: 'bold', color: '#0f172a', whiteSpace: 'nowrap' }}>{data.name}</h2>
                         </div>
-                        <div style={{ position: 'absolute', left: `${design.positions.certId.x}px`, top: `${design.positions.certId.y}px` }}>
-                            <p className="text-[20px] font-bold text-slate-800 whitespace-nowrap">No: {certId}</p>
+                        <div style={{ position: 'absolute', left: `${design.positions.certId.x}px`, top: `${design.positions.certId.y}px`, width: `${design.positions.certId.w}px`, height: `${design.positions.certId.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <p style={{ fontSize: `${design.positions.certId.h * 0.8}px`, margin: 0, fontWeight: 'bold', color: '#1e293b', whiteSpace: 'nowrap' }}>No: {certId}</p>
                         </div>
-                        <div style={{ position: 'absolute', left: `${design.positions.qr.x}px`, top: `${design.positions.qr.y}px` }} className="bg-white/80 backdrop-blur-sm p-1 rounded-md flex flex-col items-center justify-center w-[120px] h-[120px]">
-                            <QRCodeSVG value={`${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`} size={100} />
-                            <span className="text-[8px] font-bold mt-1 text-slate-900 font-sans">SCAN ME</span>
+                        <div style={{ position: 'absolute', left: `${design.positions.qr.x}px`, top: `${design.positions.qr.y}px`, width: `${design.positions.qr.w}px`, height: `${design.positions.qr.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                            <QRCodeSVG 
+                                value={`${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`} 
+                                size={design.positions.qr.w * 0.7}
+                                fgColor="#0f172a"
+                                imageSettings={{
+                                    src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
+                                    height: (design.positions.qr.w * 0.7) * 0.25,
+                                    width: (design.positions.qr.w * 0.7) * 0.25,
+                                    excavate: true,
+                                }}
+                            />
+                            <span style={{ fontSize: `${design.positions.qr.h * 0.15}px`, fontWeight: 'bold', color: '#0f172a', marginTop: '4px', fontFamily: 'sans-serif' }}>SCAN ME</span>
                         </div>
                      </div>
                    </div>
@@ -248,13 +200,6 @@ export default function VerifyPage({ params }) {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
-             <button 
-                onClick={handleDownloadPDF} 
-                disabled={isDownloading || !design?.bgUrl}
-                className="inline-block bg-emerald-600 text-white px-8 py-3.5 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-emerald-500 transition shadow-md disabled:bg-emerald-300"
-             >
-                {isDownloading ? 'Menyiapkan Dokumen...' : '📥 Download PDF'}
-             </button>
              <Link href="/" className="inline-block bg-slate-100 text-slate-700 px-8 py-3.5 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition text-center">
                 Cek Dokumen Lainnya
              </Link>

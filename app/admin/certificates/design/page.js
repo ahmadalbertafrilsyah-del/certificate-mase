@@ -34,22 +34,29 @@ function DesignEditor() {
   const canvasWidth = orientation === 'landscape' ? 1123 : 794;
   const canvasHeight = orientation === 'landscape' ? 794 : 1123;
 
+  // PERBAIKAN: Logika Resize yang lebih ketat untuk HP & Sidebar
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const resizeObserver = new ResizeObserver((entries) => {
-        for (let entry of entries) {
-            // Beri padding 32px agar kanvas tidak menempel di tepi layar
-            const availableWidth = entry.contentRect.width - 32; 
-            const newScale = availableWidth / canvasWidth;
-            
-            // Kunci skala agar tidak melebihi 100% (ukuran asli)
-            setScale(newScale < 1 ? newScale : 1);
-        }
+    const updateScale = () => {
+        if (!containerRef.current) return;
+        // Padding p-4 (HP) = 32px total, md:p-8 (Laptop) = 64px total
+        const padding = window.innerWidth < 768 ? 32 : 64;
+        const availableWidth = containerRef.current.clientWidth - padding;
+        const newScale = availableWidth / canvasWidth;
+        
+        // Kunci rasio maksimal ke 100% (tidak over-zoom)
+        setScale(newScale < 1 ? newScale : 1);
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+        // requestAnimationFrame memastikan UI tidak patah-patah saat resize
+        window.requestAnimationFrame(updateScale);
     });
 
     resizeObserver.observe(container);
+    updateScale(); // Jalankan sekali saat pertama kali render
 
     return () => {
         resizeObserver.disconnect();
@@ -154,19 +161,22 @@ function DesignEditor() {
             </div>
         </div>
 
-        <div ref={containerRef} className="flex-1 overflow-auto p-4 md:p-8 bg-slate-200/50 flex justify-center items-start">
-            {/* Pembungkus Kanvas: Mengunci ukuran dokumen fisik sesuai skala */}
+        {/* PERBAIKAN: Dihilangkan class flex justify-center, menggunakan block layout standar */}
+        <div ref={containerRef} className="flex-1 overflow-auto p-4 md:p-8 bg-slate-200/50">
+            
+            {/* Pembungkus fisik kanvas: Kunci posisi ke margin auto (tengah) dan hindari melar (shrink-0) */}
             <div 
                 style={{ 
                     width: `${canvasWidth * scale}px`, 
                     height: `${canvasHeight * scale}px`,
-                    position: 'relative'
+                    position: 'relative',
+                    margin: '0 auto' // Memusatkan konten secara aman meski sedang di-zoom
                 }}
-                className="transition-all duration-300"
+                className="shrink-0" 
             >
-                {/* Kanvas Visual */}
+                {/* Visual Kanvas Sesungguhnya */}
                 <div 
-                    className="border border-slate-300 bg-white shadow-2xl overflow-hidden rounded-md" 
+                    className="border border-slate-300 bg-white shadow-2xl overflow-hidden rounded-md shrink-0" 
                     style={{ 
                         width: `${canvasWidth}px`, 
                         height: `${canvasHeight}px`, 

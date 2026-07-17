@@ -15,7 +15,8 @@ export default function AdminCertificates() {
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const [form, setForm] = useState({ name: '', serviceId: '', date: '', location: '', time: '' });
+  // Tambahkan signerName dan signerTitle pada state form
+  const [form, setForm] = useState({ name: '', serviceId: '', date: '', location: '', signerName: '', signerTitle: '' });
 
   const fetchData = async () => {
     setLoading(true);
@@ -73,7 +74,7 @@ export default function AdminCertificates() {
         await batch.commit();
 
         alert("Acara dan Data Peserta berhasil disimpan!");
-        setForm({ name: '', serviceId: '', date: '', location: '', time: '' });
+        setForm({ name: '', serviceId: '', date: '', location: '', signerName: '', signerTitle: '' });
         setParticipants([]);
         setActiveTab('list');
     } catch (err) {
@@ -130,13 +131,14 @@ export default function AdminCertificates() {
                 <p style="font-size: ${(certIdPos.h || 30) * 0.8}px; margin: 0; font-weight: bold; color: #1e293b; white-space: nowrap;">No: ${p.certId}</p>
               </div>
               <div style="position: absolute; left: ${qrPos.x}px; top: ${qrPos.y}px; width: ${qrPos.w || 120}px; height: ${qrPos.h || 120}px; display: flex; align-items: center; justify-content: center;">
-                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://mahatma.id/verify/${p.certId}" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: contain;" />
+                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: contain;" />
               </div>
             </div>
           `;
 
           const elementToRender = document.getElementById(`cert-render-${i}`);
-          const dataUrl = await toPng(elementToRender, { quality: 1.0, pixelRatio: 2 });
+          // Optimasi kualitas gambar agar ukuran base64 tidak terlalu besar dan memicu error server
+          const dataUrl = await toPng(elementToRender, { quality: 0.8, pixelRatio: 1.5 });
           
           const pdfFormat = isLandscape ? 'landscape' : 'portrait';
           const pdfWidth = isLandscape ? 297 : 210;
@@ -166,6 +168,8 @@ export default function AdminCertificates() {
                   pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
                   failCount++;
               }
+              // Tambahkan jeda 1 detik per email agar sistem SMTP tidak menganggapnya sebagai spam
+              await new Promise(resolve => setTimeout(resolve, 1000));
           } else {
               pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
               failCount++; 
@@ -177,7 +181,7 @@ export default function AdminCertificates() {
         
     } catch (error) {
         console.error(error);
-        alert("Terjadi kesalahan saat memproses sertifikat.");
+        alert("Terjadi kesalahan saat memproses sertifikat. Pastikan koneksi internet Anda stabil.");
     }
     setIsDownloading(false);
   };
@@ -250,12 +254,27 @@ export default function AdminCertificates() {
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Tanggal</label>
-                        <input type="date" required value={form.date} onChange={e=>setForm({...form, date: e.target.value})} className="w-full border-2 border-slate-100 p-3.5 rounded-md focus:border-emerald-500 outline-none text-sm bg-slate-50" />
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Tanggal Pelaksanaan</label>
+                        <input type="text" required value={form.date} onChange={e=>setForm({...form, date: e.target.value})} className="w-full border-2 border-slate-100 p-3.5 rounded-md focus:border-emerald-500 outline-none text-sm bg-slate-50" placeholder="Cth: 12 - 14 Agustus 2026" />
                     </div>
                     <div className="md:col-span-2">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Lokasi / Tempat</label>
                         <input type="text" required value={form.location} onChange={e=>setForm({...form, location: e.target.value})} className="w-full border-2 border-slate-100 p-3.5 rounded-md focus:border-emerald-500 outline-none text-sm bg-slate-50" placeholder="Zoom Meeting / Gedung Universitas..." />
+                    </div>
+                    
+                    {/* BAGIAN TANDA TANGAN ELEKTRONIK */}
+                    <div className="md:col-span-2 mt-4 pt-6 border-t border-slate-100">
+                        <h4 className="font-bold text-sm text-slate-900 mb-4">Informasi Penandatanganan Elektronik (Penerbit)</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Nama Penandatangan</label>
+                                <input type="text" required value={form.signerName} onChange={e=>setForm({...form, signerName: e.target.value})} className="w-full border-2 border-slate-100 p-3.5 rounded-md focus:border-emerald-500 outline-none text-sm bg-slate-50" placeholder="Cth: Dr. Ahmad Subarjo, M.Pd" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Jabatan</label>
+                                <input type="text" required value={form.signerTitle} onChange={e=>setForm({...form, signerTitle: e.target.value})} className="w-full border-2 border-slate-100 p-3.5 rounded-md focus:border-emerald-500 outline-none text-sm bg-slate-50" placeholder="Cth: Direktur Utama Mahatma Academy" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 

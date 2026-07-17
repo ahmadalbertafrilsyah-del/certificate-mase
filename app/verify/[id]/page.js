@@ -16,12 +16,10 @@ export default function VerifyPage({ params }) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [liveTime, setLiveTime] = useState('');
   
-  // State untuk skala preview
   const containerRef = useRef(null);
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    // Waktu live untuk mencegah screenshot palsu
     const timer = setInterval(() => setLiveTime(new Date().toLocaleString('id-ID')), 1000);
     
     const fetchCertificate = async () => {
@@ -49,19 +47,15 @@ export default function VerifyPage({ params }) {
     return () => clearInterval(timer);
   }, [certId]);
 
-  // Efek untuk kalkulasi responsivitas Preview Kanvas agar benar-benar FIT di tengah
   useEffect(() => {
     if (data && data.event?.design) {
       const handleResize = () => {
         if (containerRef.current) {
-          // Ambil lebar yang murni tersedia di dalam container (tanpa gangguan padding luar)
           const availableWidth = containerRef.current.clientWidth;
           const isLandscape = data.event.design.orientation !== 'portrait';
           const canvasWidth = isLandscape ? 1123 : 794;
           
-          // Berikan sedikit buffer 4px agar tidak 100% menabrak garis tepi
           const safeWidth = availableWidth - 4; 
-          
           const newScale = safeWidth / canvasWidth;
           
           setScale(newScale < 1 ? newScale : 1);
@@ -70,7 +64,6 @@ export default function VerifyPage({ params }) {
 
       handleResize();
       window.addEventListener('resize', handleResize);
-      // Double trigger untuk memastikan font/gambar sudah termuat semua
       setTimeout(handleResize, 100);
       setTimeout(handleResize, 500);
 
@@ -78,7 +71,6 @@ export default function VerifyPage({ params }) {
     }
   }, [data]);
 
-  // FUNGSI DOWNLOAD PDF
   const handleDownloadPDF = async () => {
     if (!data.event?.design) return alert("Desain sertifikat belum tersedia.");
     setIsDownloading(true);
@@ -89,7 +81,6 @@ export default function VerifyPage({ params }) {
     const canvasHeight = isLandscape ? 794 : 1123;
     const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`;
 
-    // Buat kontainer HTML rahasia untuk merender PDF resolusi penuh
     const hiddenContainer = document.createElement('div');
     hiddenContainer.style.position = 'absolute';
     hiddenContainer.style.top = '-9999px';
@@ -133,7 +124,6 @@ export default function VerifyPage({ params }) {
     }
   };
 
-  // TAMPILAN LOADING
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center">
         <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-md animate-spin mb-4"></div>
@@ -141,7 +131,6 @@ export default function VerifyPage({ params }) {
     </div>
   );
 
-  // TAMPILAN JIKA SERTIFIKAT PALSU / TIDAK DITEMUKAN
   if (!data) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full bg-white p-8 rounded-md shadow-xl border-t-4 border-red-500 text-center">
@@ -162,9 +151,8 @@ export default function VerifyPage({ params }) {
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 flex flex-col items-center">
-      <div className="max-w-3xl w-full bg-white rounded-md shadow-xl border border-slate-100 overflow-hidden">
+      <div className="max-w-4xl w-full bg-white rounded-md shadow-xl border border-slate-100 overflow-hidden">
         
-        {/* Header Status Valid */}
         <div className="bg-emerald-600 p-8 text-center text-white relative overflow-hidden">
            <div className="absolute inset-0 bg-white/20 w-16 skew-x-[45deg] animate-[slide_3s_infinite]"></div>
            <div className="w-16 h-16 bg-white text-emerald-600 rounded-md flex items-center justify-center mx-auto mb-4 text-3xl shadow-lg">✓</div>
@@ -172,53 +160,69 @@ export default function VerifyPage({ params }) {
            <p className="text-xs text-emerald-100 opacity-90 tracking-wider">Diperiksa: {liveTime}</p>
         </div>
         
-        {/* Detail Data */}
         <div className="p-6 md:p-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-            <div className="border-b border-slate-100 pb-4 md:col-span-2">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Diberikan Kepada</p>
-              <p className="text-2xl font-black text-slate-900">{data.name}</p>
-            </div>
-            <div className="border-b border-slate-100 pb-4">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Nomor Registrasi</p>
-              <p className="text-lg font-bold text-emerald-700">{certId}</p>
-            </div>
-            <div className="border-b border-slate-100 pb-4">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Keterangan Kegiatan</p>
-              <p className="text-sm font-bold text-slate-800 leading-snug">{data.event?.name}</p>
-              <p className="text-[10px] text-slate-500 mt-1">{data.event?.date} • {data.event?.location}</p>
-            </div>
+          
+          {/* TABEL DATA SERTIFIKAT */}
+          <div className="mb-10">
+             <h3 className="text-lg font-black text-slate-900 mb-4 border-b border-slate-200 pb-2">Informasi Dokumen</h3>
+             <div className="border border-slate-200 rounded-md overflow-hidden">
+                <table className="w-full text-left text-sm">
+                   <tbody>
+                      <tr className="border-b border-slate-100 bg-slate-50">
+                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Nama Peserta</th>
+                         <td className="py-3 px-4 font-black text-slate-900">{data.name}</td>
+                      </tr>
+                      <tr className="border-b border-slate-100">
+                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Nomor Sertifikat</th>
+                         <td className="py-3 px-4 font-bold text-emerald-700 font-mono">{certId}</td>
+                      </tr>
+                      <tr className="border-b border-slate-100 bg-slate-50">
+                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Nama Kegiatan</th>
+                         <td className="py-3 px-4 font-medium text-slate-800">{data.event?.name}</td>
+                      </tr>
+                      <tr className="border-b border-slate-100">
+                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Tanggal Pelaksanaan</th>
+                         <td className="py-3 px-4 font-medium text-slate-800">{data.event?.date}</td>
+                      </tr>
+                      <tr>
+                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Tempat Pelaksanaan</th>
+                         <td className="py-3 px-4 font-medium text-slate-800">{data.event?.location}</td>
+                      </tr>
+                   </tbody>
+                </table>
+             </div>
           </div>
 
-          {/* AREA PREVIEW SERTIFIKAT */}
+          {/* KETERANGAN PENANDATANGANAN ELEKTRONIK */}
+          <div className="mb-10 bg-blue-50 border border-blue-100 rounded-md p-6 flex flex-col md:flex-row items-center gap-6">
+              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl shrink-0 shadow-md">
+                 ✒️
+              </div>
+              <div className="text-center md:text-left">
+                  <h4 className="text-sm font-bold text-blue-900 uppercase tracking-widest mb-1">Tanda Tangan Elektronik</h4>
+                  <p className="text-xs text-blue-700 mb-2">Dokumen ini telah disahkan secara digital (terenkripsi) oleh:</p>
+                  <p className="text-lg font-black text-slate-900">{data.event?.signerName || "Nama Tidak Tersedia"}</p>
+                  <p className="text-sm font-bold text-slate-600">{data.event?.signerTitle || "Jabatan Tidak Tersedia"}</p>
+              </div>
+          </div>
+
           {design && design.bgUrl ? (
              <div className="mb-8 border border-slate-200 rounded-md overflow-hidden bg-white">
                <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-widest text-center">
                  Preview Dokumen Asli
                </div>
                
-               {/* Wrapper Luar dengan Padding */}
                <div className="p-4 md:p-8 flex justify-center items-center bg-slate-100/50 w-full overflow-hidden">
-                 
-                 {/* Container Ref untuk menghitung lebar bersih tanpa padding */}
                  <div ref={containerRef} className="w-full flex justify-center">
-                   
-                   {/* KOTAK PEMBUNGKUS (Menyusut sesuai rasio scale) */}
                    <div 
                      className="relative transition-all duration-300"
-                     style={{ 
-                       width: `${canvasWidth * scale}px`, 
-                       height: `${canvasHeight * scale}px` 
-                     }}
+                     style={{ width: `${canvasWidth * scale}px`, height: `${canvasHeight * scale}px` }}
                    >
-                     {/* KANVAS ASLI (Di-scale dari pojok kiri atas) */}
                      <div 
                        className="absolute top-0 left-0 bg-white shadow-lg border border-slate-200 overflow-hidden origin-top-left"
                        style={{ 
-                         width: `${canvasWidth}px`, 
-                         height: `${canvasHeight}px`, 
-                         backgroundImage: `url(${design.bgUrl})`, 
-                         backgroundSize: '100% 100%',
+                         width: `${canvasWidth}px`, height: `${canvasHeight}px`, 
+                         backgroundImage: `url(${design.bgUrl})`, backgroundSize: '100% 100%',
                          transform: `scale(${scale})` 
                        }}
                      >
@@ -235,7 +239,6 @@ export default function VerifyPage({ params }) {
                      </div>
                    </div>
                  </div>
-                 
                </div>
              </div>
           ) : (
@@ -244,7 +247,6 @@ export default function VerifyPage({ params }) {
              </div>
           )}
 
-          {/* ACTION BUTTONS */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
              <button 
                 onClick={handleDownloadPDF} 

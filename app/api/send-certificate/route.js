@@ -1,16 +1,17 @@
 import nodemailer from 'nodemailer';
 import { NextResponse } from 'next/server';
 
+// Hindari timeout saat mengirim file besar
+export const maxDuration = 60;
+
 export async function POST(request) {
   try {
-    // Menangkap data yang dikirim dari dashboard admin
     const { email, name, certId, pdfBase64, eventName } = await request.json();
 
     if (!email) {
       return NextResponse.json({ success: false, error: 'Email tidak ditemukan' }, { status: 400 });
     }
 
-    // Konfigurasi SMTP Gmail
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -19,10 +20,10 @@ export async function POST(request) {
       },
     });
 
-    // Mengubah data Base64 PDF kembali menjadi Buffer file untuk lampiran
-    const pdfBuffer = Buffer.from(pdfBase64.split("base64,")[1], "base64");
+    // Validasi pembentukan buffer dari Base64
+    const cleanBase64 = pdfBase64.includes("base64,") ? pdfBase64.split("base64,")[1] : pdfBase64;
+    const pdfBuffer = Buffer.from(cleanBase64, "base64");
 
-    // Desain Isi Email
     const mailOptions = {
       from: `"Mahatma Academy" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -56,7 +57,6 @@ export async function POST(request) {
       ]
     };
 
-    // Kirim Email
     await transporter.sendMail(mailOptions);
     
     return NextResponse.json({ success: true, message: 'Email berhasil terkirim' });

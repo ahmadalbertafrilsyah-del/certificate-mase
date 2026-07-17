@@ -111,7 +111,11 @@ function DesignEditor() {
   const handleDrag = (key) => (e, data) => setItems(prev => ({ ...prev, [key]: { ...prev[key], x: data.x, y: data.y } }));
   
   const onResize = (key) => (e, { size }) => {
-    setItems(prev => ({ ...prev, [key]: { ...prev[key], w: size.width, h: size.height } }));
+    if (key === 'qr') {
+        setItems(prev => ({ ...prev, [key]: { ...prev[key], w: size.width, h: size.width } }));
+    } else {
+        setItems(prev => ({ ...prev, [key]: { ...prev[key], w: size.width, h: size.height } }));
+    }
   };
 
   const handleSaveDesign = async () => {
@@ -206,21 +210,20 @@ function DesignEditor() {
 
                     <Draggable scale={scale} nodeRef={nodeRefQr} position={{x: items.qr.x, y: items.qr.y}} onStop={handleDrag('qr')} bounds="parent" cancel=".react-resizable-handle">
                         <div ref={nodeRefQr} className="absolute">
-                            <Resizable width={items.qr.w} height={items.qr.h} onResize={onResize('qr')}>
+                            <Resizable width={items.qr.w} height={items.qr.h} onResize={onResize('qr')} lockAspectRatio={true}>
                                 <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 flex flex-col items-center justify-center relative" style={{width: items.qr.w, height: items.qr.h}}>
                                     <div className="pointer-events-none flex flex-col items-center justify-center h-full w-full">
                                         <QRCodeSVG 
                                             value="https://mahatma.id/verify" 
-                                            size={items.qr.w * 0.7} 
+                                            size={items.qr.w} 
                                             fgColor="#0f172a"
                                             imageSettings={{
                                                 src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
-                                                height: (items.qr.w * 0.7) * 0.25,
-                                                width: (items.qr.w * 0.7) * 0.25,
+                                                height: items.qr.w * 0.25,
+                                                width: items.qr.w * 0.25,
                                                 excavate: true,
                                             }}
                                         />
-                                        <span style={{fontSize: items.qr.h * 0.15}} className="font-bold text-slate-900 mt-1">QR Code</span>
                                     </div>
                                 </div>
                             </Resizable>

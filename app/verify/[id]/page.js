@@ -92,6 +92,9 @@ export default function VerifyPage({ params }) {
   const canvasWidth = isLandscape ? 1123 : 794;
   const canvasHeight = isLandscape ? 794 : 1123;
   const design = data.event?.design;
+  
+  // Mendukung acara lama yang menggunakan 1 signer maupun acara baru yang menggunakan multiple signers
+  const signersList = data.event?.signers || (data.event?.signerName ? [{ name: data.event.signerName, title: data.event.signerTitle }] : []);
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 flex flex-col items-center">
@@ -136,16 +139,20 @@ export default function VerifyPage({ params }) {
              </div>
           </div>
 
-          <div className="mb-10 bg-blue-50 border border-blue-100 rounded-md p-6 flex flex-col md:flex-row items-center gap-6">
-              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl shrink-0 shadow-md">
-                 ✒️
-              </div>
-              <div className="text-center md:text-left">
-                  <h4 className="text-sm font-bold text-blue-900 uppercase tracking-widest mb-1">Tanda Tangan Elektronik</h4>
-                  <p className="text-xs text-blue-700 mb-2">Dokumen ini telah disahkan secara digital (terenkripsi) oleh:</p>
-                  <p className="text-lg font-black text-slate-900">{data.event?.signerName || "Nama Tidak Tersedia"}</p>
-                  <p className="text-sm font-bold text-slate-600">{data.event?.signerTitle || "Jabatan Tidak Tersedia"}</p>
-              </div>
+          <div className="mb-10">
+            {signersList.map((signer, idx) => (
+                <div key={idx} className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-6 flex flex-col md:flex-row items-center gap-6">
+                    <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl shrink-0 shadow-md">
+                       ✒️
+                    </div>
+                    <div className="text-center md:text-left">
+                        <h4 className="text-sm font-bold text-blue-900 uppercase tracking-widest mb-1">Tanda Tangan Elektronik {signersList.length > 1 ? idx + 1 : ''}</h4>
+                        <p className="text-xs text-blue-700 mb-2">Dokumen ini telah disahkan secara digital (terenkripsi) oleh:</p>
+                        <p className="text-lg font-black text-slate-900">{signer.name || "Nama Tidak Tersedia"}</p>
+                        <p className="text-sm font-bold text-slate-600">{signer.title || "Jabatan Tidak Tersedia"}</p>
+                    </div>
+                </div>
+            ))}
           </div>
 
           {design && design.bgUrl ? (
@@ -177,16 +184,15 @@ export default function VerifyPage({ params }) {
                         <div style={{ position: 'absolute', left: `${design.positions.qr.x}px`, top: `${design.positions.qr.y}px`, width: `${design.positions.qr.w}px`, height: `${design.positions.qr.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
                             <QRCodeSVG 
                                 value={`${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`} 
-                                size={design.positions.qr.w * 0.7}
+                                size={design.positions.qr.w}
                                 fgColor="#0f172a"
                                 imageSettings={{
                                     src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
-                                    height: (design.positions.qr.w * 0.7) * 0.25,
-                                    width: (design.positions.qr.w * 0.7) * 0.25,
+                                    height: (design.positions.qr.w) * 0.25,
+                                    width: (design.positions.qr.w) * 0.25,
                                     excavate: true,
                                 }}
                             />
-                            <span style={{ fontSize: `${design.positions.qr.h * 0.15}px`, fontWeight: 'bold', color: '#0f172a', marginTop: '4px', fontFamily: 'sans-serif' }}>SCAN ME</span>
                         </div>
                      </div>
                    </div>

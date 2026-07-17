@@ -29,7 +29,9 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden">
         <div className="bg-emerald-50 p-10 text-center border-b border-emerald-100">
-            <div className="w-14 h-14 bg-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-white font-black text-3xl shadow-lg mb-5">M</div>
+            <div className="w-16 h-16 bg-white rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-5 p-1 border border-emerald-100 overflow-hidden">
+                <img src="https://i.ibb.co.com/N2sxbS2k/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            </div>
             <h1 className="text-2xl font-black text-emerald-900 tracking-wide">Portal Admin</h1>
             <p className="text-emerald-600 text-[10px] font-bold tracking-widest uppercase mt-2">Mahatma E-Certificate</p>
         </div>

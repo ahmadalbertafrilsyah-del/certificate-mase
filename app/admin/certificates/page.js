@@ -3,12 +3,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-// PERBAIKAN: Menggunakan toJpeg agar ukuran file jauh lebih kecil dan tidak memicu error server saat kirim email
 import { toJpeg } from 'html-to-image'; 
 import { renderToString } from 'react-dom/server';
 import { QRCodeSVG } from 'qrcode.react';
 import { db } from '@/lib/firebase'; 
-import { collection, addDoc, getDocs, writeBatch, doc, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, writeBatch, doc, query, where, deleteDoc } from 'firebase/firestore';
 
 export default function AdminCertificates() {
   const [activeTab, setActiveTab] = useState('list');
@@ -18,7 +17,14 @@ export default function AdminCertificates() {
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const [form, setForm] = useState({ name: '', serviceId: '', date: '', location: '', signerName: '', signerTitle: '' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterService, setFilterService] = useState('');
+
+  const [form, setForm] = useState({ name: '', serviceId: '', date: '', location: '' });
+  const [signers, setSigners] = useState([{ name: '', title: '' }]);
+
+  const [editingIndex, setEditingIndex] = useState(-1);
+  const [editForm, setEditForm] = useState({ name: '', certId: '', email: '' });
 
   const fetchData = async () => {
     setLoading(true);
@@ -30,6 +36,12 @@ export default function AdminCertificates() {
   };
 
   useEffect(() => { fetchData(); }, [activeTab]);
+
+  const filteredEvents = eventsList.filter(ev => {
+    const matchSearch = ev.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchService = filterService ? ev.serviceId === filterService : true;
+    return matchSearch && matchService;
+  });
 
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
@@ -51,6 +63,13 @@ export default function AdminCertificates() {
     e.target.value = null;
   };
 
+  const handleSaveEdit = (idx) => {
+      const newParts = [...participants];
+      newParts[idx] = editForm;
+      setParticipants(newParts);
+      setEditingIndex(-1);
+  };
+
   const handleSaveEvent = async (e) => {
     e.preventDefault();
     if(participants.length === 0) return alert("Harap masukkan minimal 1 peserta dari Excel!");
@@ -58,6 +77,7 @@ export default function AdminCertificates() {
     try {
         const eventRef = await addDoc(collection(db, "events"), {
             ...form,
+            signers: signers,
             participantCount: participants.length,
             createdAt: new Date().toISOString()
         });
@@ -76,7 +96,8 @@ export default function AdminCertificates() {
         await batch.commit();
 
         alert("Acara dan Data Peserta berhasil disimpan!");
-        setForm({ name: '', serviceId: '', date: '', location: '', signerName: '', signerTitle: '' });
+        setForm({ name: '', serviceId: '', date: '', location: '' });
+        setSigners([{ name: '', title: '' }]);
         setParticipants([]);
         setActiveTab('list');
     } catch (err) {
@@ -84,6 +105,34 @@ export default function AdminCertificates() {
         alert("Terjadi kesalahan sistem.");
     }
     setLoading(false);
+  };
+
+  // FUNGSI BARU: Menghapus Acara beserta Pesertanya
+  const handleDeleteEvent = async (eventId) => {
+    if(confirm("Apakah Anda yakin ingin menghapus acara ini? Seluruh data peserta yang terkait juga akan dihapus permanen.")) {
+        setLoading(true);
+        try {
+            // Hapus dokumen acara
+            await deleteDoc(doc(db, "events", eventId));
+
+            // Hapus semua peserta yang terkait dengan acara ini
+            const q = query(collection(db, "participants"), where("eventId", "==", eventId));
+            const partSnap = await getDocs(q);
+            
+            const batch = writeBatch(db);
+            partSnap.forEach((d) => {
+                batch.delete(d.ref);
+            });
+            await batch.commit();
+
+            alert("Acara berhasil dihapus!");
+            fetchData(); // Refresh tabel
+        } catch (error) {
+            console.error("Gagal menghapus acara:", error);
+            alert("Terjadi kesalahan saat menghapus acara.");
+        }
+        setLoading(false);
+    }
   };
 
   const handleBatchGenerateAndSend = async (eventData) => {
@@ -125,9 +174,8 @@ export default function AdminCertificates() {
           const qrPos = config.positions.qr;
 
           const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}`;
-          const qrSize = (qrPos.w || 120) * 0.7;
+          const qrSize = qrPos.w || 120;
           
-          // Render QR Code SVG menjadi string statis agar tiap peserta mendapatkan QR Code unik yang presisi
           const qrSvg = renderToString(
              <QRCodeSVG
                  value={qrLink}
@@ -152,14 +200,11 @@ export default function AdminCertificates() {
               </div>
               <div style="position: absolute; left: ${qrPos.x}px; top: ${qrPos.y}px; width: ${qrPos.w || 120}px; height: ${qrPos.h || 120}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
                  ${qrSvg}
-                 <span style="font-size: ${(qrPos.h || 120) * 0.15}px; font-weight: bold; font-family: sans-serif; color: #0f172a; margin-top: 4px;">SCAN ME</span>
               </div>
             </div>
           `;
 
           const elementToRender = document.getElementById(`cert-render-${i}`);
-          
-          // toJpeg dan pixelRatio: 1.0 menurunkan ukuran file hingga 80% untuk mengamankan pengiriman email
           const dataUrl = await toJpeg(elementToRender, { quality: 0.8, pixelRatio: 1.0 });
           
           const pdfFormat = isLandscape ? 'landscape' : 'portrait';
@@ -222,17 +267,24 @@ export default function AdminCertificates() {
 
         {activeTab === 'list' && (
             <div className="bg-white rounded-md shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <input type="text" placeholder="Cari nama acara..." className="px-4 py-2.5 text-sm font-bold border-2 border-slate-200 rounded-md w-full md:w-64 outline-none focus:border-emerald-500 bg-white" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    <select className="px-4 py-2.5 text-sm font-bold border-2 border-slate-200 rounded-md w-full md:w-auto outline-none focus:border-emerald-500 bg-white" value={filterService} onChange={e => setFilterService(e.target.value)}>
+                        <option value="">-- Semua Layanan --</option>
+                        {servicesList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[700px]">
                         <thead>
-                            <tr className="bg-slate-50 text-[10px] uppercase tracking-widest text-slate-500 border-b border-slate-200">
+                            <tr className="bg-slate-100 text-[10px] uppercase tracking-widest text-slate-500 border-b border-slate-200">
                                 <th className="p-5">Nama & Detail Acara</th>
                                 <th className="p-5 text-center">Peserta</th>
-                                <th className="p-5 text-center">Aksi Desain & PDF</th>
+                                <th className="p-5 text-right">Aksi Desain & PDF</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {eventsList.map(ev => (
+                            {filteredEvents.map(ev => (
                                 <tr key={ev.id} className="border-b border-slate-100 hover:bg-slate-50">
                                     <td className="p-5">
                                         <p className="font-bold text-sm text-slate-900 mb-1">{ev.name}</p>
@@ -248,12 +300,20 @@ export default function AdminCertificates() {
                                             disabled={isDownloading}
                                             className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50"
                                         >
-                                            {isDownloading ? 'Memproses & Mengirim...' : 'Generate & Kirim Email'}
+                                            {isDownloading ? 'Memproses...' : 'Generate & Email'}
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeleteEvent(ev.id)} 
+                                            disabled={loading}
+                                            title="Hapus Acara"
+                                            className="px-3 py-2 bg-red-50 text-red-600 rounded-md text-sm font-bold hover:bg-red-600 hover:text-white transition disabled:opacity-50"
+                                        >
+                                            🗑️
                                         </button>
                                     </td>
                                 </tr>
                             ))}
-                            {eventsList.length === 0 && !loading && <tr><td colSpan="3" className="p-8 text-center text-slate-400 text-sm">Belum ada acara yang dibuat.</td></tr>}
+                            {filteredEvents.length === 0 && !loading && <tr><td colSpan="3" className="p-8 text-center text-slate-400 text-sm">Tidak ada acara yang cocok.</td></tr>}
                         </tbody>
                     </table>
                 </div>
@@ -284,17 +344,27 @@ export default function AdminCertificates() {
                     </div>
                     
                     <div className="md:col-span-2 mt-4 pt-6 border-t border-slate-100">
-                        <h4 className="font-bold text-sm text-slate-900 mb-4">Informasi Penandatanganan Elektronik (Penerbit)</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Nama Penandatangan</label>
-                                <input type="text" required value={form.signerName} onChange={e=>setForm({...form, signerName: e.target.value})} className="w-full border-2 border-slate-100 p-3.5 rounded-md focus:border-emerald-500 outline-none text-sm bg-slate-50" placeholder="Cth: Dr. Ahmad Subarjo, M.Pd" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Jabatan</label>
-                                <input type="text" required value={form.signerTitle} onChange={e=>setForm({...form, signerTitle: e.target.value})} className="w-full border-2 border-slate-100 p-3.5 rounded-md focus:border-emerald-500 outline-none text-sm bg-slate-50" placeholder="Cth: Direktur Utama Mahatma Academy" />
-                            </div>
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="font-bold text-sm text-slate-900">Informasi Penandatanganan Elektronik</h4>
+                            <button type="button" onClick={() => setSigners([...signers, {name:'', title:''}])} className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-md font-bold hover:bg-emerald-200 transition">+ Tambah Orang</button>
                         </div>
+                        {signers.map((signer, index) => (
+                            <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4 items-end bg-slate-50 p-4 rounded-md border border-slate-200">
+                                <div className="md:col-span-5">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Nama Penandatangan {index + 1}</label>
+                                    <input type="text" required value={signer.name} onChange={e => { const newS = [...signers]; newS[index].name = e.target.value; setSigners(newS); }} className="w-full border-2 border-slate-100 p-3 rounded-md focus:border-emerald-500 outline-none text-sm font-bold bg-white" placeholder="Cth: Dr. Ahmad Subarjo, M.Pd" />
+                                </div>
+                                <div className="md:col-span-6">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Jabatan</label>
+                                    <input type="text" required value={signer.title} onChange={e => { const newS = [...signers]; newS[index].title = e.target.value; setSigners(newS); }} className="w-full border-2 border-slate-100 p-3 rounded-md focus:border-emerald-500 outline-none text-sm font-bold bg-white" placeholder="Cth: Direktur Utama" />
+                                </div>
+                                <div className="md:col-span-1 flex justify-end">
+                                    {signers.length > 1 && (
+                                        <button type="button" onClick={() => { const newS = [...signers]; newS.splice(index, 1); setSigners(newS); }} className="w-full md:w-auto p-3 bg-red-100 text-red-600 rounded-md hover:bg-red-200 flex justify-center font-black transition">X</button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -307,7 +377,41 @@ export default function AdminCertificates() {
                     </div>
                     {participants.length > 0 ? (
                         <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-md bg-white shadow-inner">
-                            <table className="w-full text-left text-xs"><thead className="bg-slate-100 sticky top-0"><tr><th className="p-3 border-b border-slate-200">Nama Lengkap</th><th className="p-3 border-b border-slate-200">No. Sertifikat</th><th className="p-3 border-b border-slate-200">Email</th></tr></thead><tbody>{participants.map((p, i) => (<tr key={i} className="border-b border-slate-50"><td className="p-3 font-bold text-slate-800">{p.name}</td><td className="p-3 font-mono text-emerald-600">{p.certId}</td><td className="p-3 text-slate-500">{p.email || '-'}</td></tr>))}</tbody></table>
+                            <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-100 sticky top-0">
+                                    <tr>
+                                        <th className="p-3 border-b border-slate-200">Nama Lengkap</th>
+                                        <th className="p-3 border-b border-slate-200">No. Sertifikat</th>
+                                        <th className="p-3 border-b border-slate-200">Email</th>
+                                        <th className="p-3 border-b border-slate-200 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {participants.map((p, i) => (
+                                        editingIndex === i ? (
+                                            <tr key={i} className="border-b border-slate-50 bg-emerald-50/50">
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} /></td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500" value={editForm.certId} onChange={e => setEditForm({...editForm, certId: e.target.value})} /></td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} /></td>
+                                                <td className="p-2 text-right whitespace-nowrap">
+                                                    <button type="button" onClick={() => handleSaveEdit(i)} className="text-emerald-700 font-bold mr-3 hover:underline">Simpan</button>
+                                                    <button type="button" onClick={() => setEditingIndex(-1)} className="text-slate-500 font-bold hover:underline">Batal</button>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition">
+                                                <td className="p-3 font-bold text-slate-800">{p.name}</td>
+                                                <td className="p-3 font-mono text-emerald-600">{p.certId}</td>
+                                                <td className="p-3 text-slate-500">{p.email || '-'}</td>
+                                                <td className="p-3 text-right whitespace-nowrap">
+                                                    <button type="button" onClick={() => { setEditingIndex(i); setEditForm(p); }} className="text-blue-500 font-bold mr-3 hover:underline">Edit</button>
+                                                    <button type="button" onClick={() => { const newP = [...participants]; newP.splice(i, 1); setParticipants(newP); }} className="text-red-500 font-bold hover:underline">Hapus</button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     ) : ( <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-md text-slate-400 text-sm font-medium">Belum ada data diimpor.</div> )}
                 </div>

@@ -11,7 +11,6 @@ export default function AdminLayout({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // STATE UNTUK MENYEMBUNYIKAN SIDEBAR
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
@@ -38,10 +37,8 @@ export default function AdminLayout({ children }) {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col md:flex-row text-slate-800">
       
-      {/* SIDEBAR BISA MENYUSUT (w-20 JIKA COLLAPSED, w-72 JIKA TERBUKA) */}
       <aside className={`fixed bottom-0 w-full md:relative bg-white flex flex-col border-t md:border-t-0 md:border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 order-2 md:order-1 h-16 md:h-screen transition-all duration-300 ${isCollapsed ? 'md:w-24' : 'md:w-72'}`}>
         
-        {/* Tombol Collapse (Panah) */}
         <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden md:flex absolute -right-3 top-8 w-6 h-6 bg-emerald-600 text-white rounded-full items-center justify-center shadow-md z-50 hover:bg-emerald-500 transition-colors"
@@ -49,16 +46,16 @@ export default function AdminLayout({ children }) {
             {isCollapsed ? '▶' : '◀'}
         </button>
 
-        {/* Header Admin */}
         <div className={`hidden md:flex flex-col p-6 border-b border-slate-100 transition-all ${isCollapsed ? 'items-center' : 'items-start'}`}>
             <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-black shadow-md shrink-0">M</div>
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-md shrink-0 overflow-hidden p-1 border border-slate-100">
+                    <img src="https://i.ibb.co.com/N2sxbS2k/logo.png" alt="Logo" className="w-full h-full object-contain" />
+                </div>
                 {!isCollapsed && <h1 className="text-xl font-black text-slate-900 tracking-wide transition-opacity">Mahatma</h1>}
             </div>
             {!isCollapsed && <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 inline-block px-3 py-1.5 rounded-md mt-2">Portal Admin Resmi</p>}
         </div>
 
-        {/* Navigasi */}
         <nav className="flex md:flex-col justify-around md:justify-start items-center md:items-stretch h-full md:h-auto md:flex-1 p-2 md:p-4 md:space-y-3">
             {!isCollapsed && <p className="hidden md:block text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 mb-2 mt-2">Menu Utama</p>}
             
@@ -75,7 +72,6 @@ export default function AdminLayout({ children }) {
             </Link>
         </nav>
 
-        {/* Tombol Logout */}
         <div className="hidden md:block p-4 border-t border-slate-100">
             <button onClick={handleLogout} title="Keluar Sistem" className={`w-full px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors flex items-center border border-transparent hover:border-red-100 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
                 {isCollapsed ? <span className="text-lg">⏏️</span> : <>Keluar Sistem <span className="text-lg">&rarr;</span></>}

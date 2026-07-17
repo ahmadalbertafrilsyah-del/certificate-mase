@@ -7,7 +7,7 @@ import { toJpeg } from 'html-to-image';
 import { renderToString } from 'react-dom/server';
 import { QRCodeSVG } from 'qrcode.react';
 import { db } from '@/lib/firebase'; 
-import { collection, addDoc, getDocs, writeBatch, doc, query, where, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, writeBatch, doc, query, where, deleteDoc, updateDoc } from 'firebase/firestore';
 
 export default function AdminCertificates() {
   const [activeTab, setActiveTab] = useState('list');
@@ -25,6 +25,13 @@ export default function AdminCertificates() {
 
   const [editingIndex, setEditingIndex] = useState(-1);
   const [editForm, setEditForm] = useState({ name: '', certId: '', email: '' });
+
+  // States untuk fitur Kelola/Edit Peserta di Daftar Acara
+  const [manageEvent, setManageEvent] = useState(null);
+  const [eventParticipants, setEventParticipants] = useState([]);
+  const [isManagingLoading, setIsManagingLoading] = useState(false);
+  const [editingPartId, setEditingPartId] = useState(null);
+  const [partEditForm, setPartEditForm] = useState({ name: '', certId: '', email: '' });
 
   const fetchData = async () => {
     setLoading(true);
@@ -107,15 +114,11 @@ export default function AdminCertificates() {
     setLoading(false);
   };
 
-  // FUNGSI BARU: Menghapus Acara beserta Pesertanya
   const handleDeleteEvent = async (eventId) => {
     if(confirm("Apakah Anda yakin ingin menghapus acara ini? Seluruh data peserta yang terkait juga akan dihapus permanen.")) {
         setLoading(true);
         try {
-            // Hapus dokumen acara
             await deleteDoc(doc(db, "events", eventId));
-
-            // Hapus semua peserta yang terkait dengan acara ini
             const q = query(collection(db, "participants"), where("eventId", "==", eventId));
             const partSnap = await getDocs(q);
             
@@ -126,13 +129,52 @@ export default function AdminCertificates() {
             await batch.commit();
 
             alert("Acara berhasil dihapus!");
-            fetchData(); // Refresh tabel
+            fetchData(); 
         } catch (error) {
             console.error("Gagal menghapus acara:", error);
             alert("Terjadi kesalahan saat menghapus acara.");
         }
         setLoading(false);
     }
+  };
+
+  // --- FUNGSI KELOLA PESERTA DATABASE ---
+  const openManageParticipants = async (ev) => {
+      setManageEvent(ev);
+      setIsManagingLoading(true);
+      try {
+          const q = query(collection(db, "participants"), where("eventId", "==", ev.id));
+          const snap = await getDocs(q);
+          setEventParticipants(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+          console.error(err);
+          alert("Gagal memuat daftar peserta.");
+      }
+      setIsManagingLoading(false);
+  };
+
+  const saveParticipantEdit = async (id) => {
+      try {
+          await updateDoc(doc(db, "participants", id), partEditForm);
+          setEventParticipants(prev => prev.map(p => p.id === id ? { ...p, ...partEditForm } : p));
+          setEditingPartId(null);
+          alert("Data peserta berhasil diperbarui!");
+      } catch (err) {
+          console.error(err);
+          alert("Gagal memperbarui data peserta.");
+      }
+  };
+
+  const deleteParticipantDb = async (id) => {
+      if(confirm("Hapus peserta ini dari acara?")) {
+          try {
+              await deleteDoc(doc(db, "participants", id));
+              setEventParticipants(prev => prev.filter(p => p.id !== id));
+          } catch (err) {
+              console.error(err);
+              alert("Gagal menghapus peserta.");
+          }
+      }
   };
 
   const handleBatchGenerateAndSend = async (eventData) => {
@@ -253,7 +295,7 @@ export default function AdminCertificates() {
   };
 
   return (
-    <div className="p-4 md:p-10 animate-in fade-in duration-300">
+    <div className="p-4 md:p-10 animate-in fade-in duration-300 relative">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b border-slate-200 pb-4 gap-4">
             <div>
                 <h2 className="text-2xl md:text-3xl font-black text-slate-900 font-serif">Sertifikat Acara</h2>
@@ -275,7 +317,7 @@ export default function AdminCertificates() {
                     </select>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[700px]">
+                    <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
                             <tr className="bg-slate-100 text-[10px] uppercase tracking-widest text-slate-500 border-b border-slate-200">
                                 <th className="p-5">Nama & Detail Acara</th>
@@ -292,6 +334,13 @@ export default function AdminCertificates() {
                                     </td>
                                     <td className="p-5 text-center"><span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-md text-xs font-bold">{ev.participantCount || 0}</span></td>
                                     <td className="p-5 text-right space-x-2 whitespace-nowrap">
+                                        <button 
+                                            onClick={() => openManageParticipants(ev)} 
+                                            title="Kelola Peserta"
+                                            className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-md text-xs font-bold hover:bg-emerald-600 hover:text-white transition"
+                                        >
+                                            👥 Peserta
+                                        </button>
                                         <Link href={`/admin/certificates/design?eventId=${ev.id}`} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-200 transition">
                                             Kanvas Desain
                                         </Link>
@@ -390,12 +439,12 @@ export default function AdminCertificates() {
                                     {participants.map((p, i) => (
                                         editingIndex === i ? (
                                             <tr key={i} className="border-b border-slate-50 bg-emerald-50/50">
-                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} /></td>
-                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500" value={editForm.certId} onChange={e => setEditForm({...editForm, certId: e.target.value})} /></td>
-                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} /></td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} /></td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={editForm.certId} onChange={e => setEditForm({...editForm, certId: e.target.value})} /></td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} /></td>
                                                 <td className="p-2 text-right whitespace-nowrap">
-                                                    <button type="button" onClick={() => handleSaveEdit(i)} className="text-emerald-700 font-bold mr-3 hover:underline">Simpan</button>
-                                                    <button type="button" onClick={() => setEditingIndex(-1)} className="text-slate-500 font-bold hover:underline">Batal</button>
+                                                    <button type="button" onClick={() => handleSaveEdit(i)} className="text-white bg-emerald-600 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-emerald-500 mr-2 transition">Simpan</button>
+                                                    <button type="button" onClick={() => setEditingIndex(-1)} className="text-slate-500 bg-slate-200 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-slate-300 transition">Batal</button>
                                                 </td>
                                             </tr>
                                         ) : (
@@ -404,8 +453,8 @@ export default function AdminCertificates() {
                                                 <td className="p-3 font-mono text-emerald-600">{p.certId}</td>
                                                 <td className="p-3 text-slate-500">{p.email || '-'}</td>
                                                 <td className="p-3 text-right whitespace-nowrap">
-                                                    <button type="button" onClick={() => { setEditingIndex(i); setEditForm(p); }} className="text-blue-500 font-bold mr-3 hover:underline">Edit</button>
-                                                    <button type="button" onClick={() => { const newP = [...participants]; newP.splice(i, 1); setParticipants(newP); }} className="text-red-500 font-bold hover:underline">Hapus</button>
+                                                    <button type="button" onClick={() => { setEditingIndex(i); setEditForm(p); }} className="text-blue-600 bg-blue-50 px-2 py-1.5 rounded-md font-bold hover:bg-blue-100 mr-2 transition" title="Edit Peserta">✏️</button>
+                                                    <button type="button" onClick={() => { const newP = [...participants]; newP.splice(i, 1); setParticipants(newP); }} className="text-red-600 bg-red-50 px-2 py-1.5 rounded-md font-bold hover:bg-red-100 transition" title="Hapus Peserta">🗑️</button>
                                                 </td>
                                             </tr>
                                         )
@@ -422,6 +471,67 @@ export default function AdminCertificates() {
                     </button>
                 </div>
             </form>
+        )}
+
+        {/* MODAL KELOLA PESERTA SETELAH ACARA TERSIMPAN */}
+        {manageEvent && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <div>
+                            <h3 className="font-black text-lg text-slate-900">Kelola Peserta</h3>
+                            <p className="text-xs text-slate-500 mt-1">Acara: {manageEvent.name}</p>
+                        </div>
+                        <button onClick={() => setManageEvent(null)} className="text-slate-400 hover:text-red-500 font-bold text-xl">&times;</button>
+                    </div>
+                    <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
+                        {isManagingLoading ? (
+                            <p className="text-center text-slate-500 text-sm font-bold py-10">Memuat data peserta...</p>
+                        ) : (
+                            <div className="border border-slate-200 rounded-md bg-white overflow-hidden shadow-inner">
+                                <table className="w-full text-left text-xs border-collapse">
+                                    <thead className="bg-slate-100 sticky top-0">
+                                        <tr>
+                                            <th className="p-3 border-b border-slate-200">Nama Lengkap</th>
+                                            <th className="p-3 border-b border-slate-200">No. Sertifikat</th>
+                                            <th className="p-3 border-b border-slate-200">Email</th>
+                                            <th className="p-3 border-b border-slate-200 text-right">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {eventParticipants.map(p => (
+                                            editingPartId === p.id ? (
+                                                <tr key={p.id} className="border-b border-slate-50 bg-emerald-50/50">
+                                                    <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={partEditForm.name} onChange={e => setPartEditForm({...partEditForm, name: e.target.value})} /></td>
+                                                    <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={partEditForm.certId} onChange={e => setPartEditForm({...partEditForm, certId: e.target.value})} /></td>
+                                                    <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={partEditForm.email} onChange={e => setPartEditForm({...partEditForm, email: e.target.value})} /></td>
+                                                    <td className="p-2 text-right whitespace-nowrap">
+                                                        <button onClick={() => saveParticipantEdit(p.id)} className="text-white bg-emerald-600 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-emerald-500 mr-2 transition">Simpan</button>
+                                                        <button onClick={() => setEditingPartId(null)} className="text-slate-500 bg-slate-200 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-slate-300 transition">Batal</button>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50">
+                                                    <td className="p-3 font-bold text-slate-800">{p.name}</td>
+                                                    <td className="p-3 font-mono text-emerald-600">{p.certId}</td>
+                                                    <td className="p-3 text-slate-500">{p.email || '-'}</td>
+                                                    <td className="p-3 text-right whitespace-nowrap">
+                                                        <button onClick={() => { setEditingPartId(p.id); setPartEditForm({ name: p.name, certId: p.certId, email: p.email }); }} className="text-blue-600 bg-blue-50 px-2 py-1.5 rounded-md font-bold hover:bg-blue-100 mr-2 transition" title="Edit Peserta Langsung (Database)">✏️</button>
+                                                        <button onClick={() => deleteParticipantDb(p.id)} className="text-red-600 bg-red-50 px-2 py-1.5 rounded-md font-bold hover:bg-red-100 transition" title="Hapus Peserta Secara Permanen">🗑️</button>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        ))}
+                                        {eventParticipants.length === 0 && (
+                                            <tr><td colSpan="4" className="text-center py-10 text-slate-400 font-medium">Tidak ada data peserta.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         )}
     </div>
   );

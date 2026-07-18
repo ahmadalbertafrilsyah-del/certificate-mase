@@ -93,8 +93,11 @@ export default function VerifyPage({ params }) {
   const canvasHeight = isLandscape ? 794 : 1123;
   const design = data.event?.design;
   
-  // Mendukung acara lama yang menggunakan 1 signer maupun acara baru yang menggunakan multiple signers
   const signersList = data.event?.signers || (data.event?.signerName ? [{ name: data.event.signerName, title: data.event.signerTitle }] : []);
+
+  // Variabel perataan teks dinamis
+  const alignName = design?.positions?.name?.align || 'center';
+  const alignCertId = design?.positions?.certId?.align || 'center';
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 flex flex-col items-center">
@@ -175,11 +178,11 @@ export default function VerifyPage({ params }) {
                          transform: `scale(${scale})` 
                        }}
                      >
-                        <div style={{ position: 'absolute', left: `${design.positions.name.x}px`, top: `${design.positions.name.y}px`, width: `${design.positions.name.w}px`, height: `${design.positions.name.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <h2 style={{ fontSize: `${design.positions.name.h * 0.8}px`, margin: 0, fontWeight: 'bold', color: '#0f172a', whiteSpace: 'nowrap' }}>{data.name}</h2>
+                        <div style={{ position: 'absolute', left: `${design.positions.name.x}px`, top: `${design.positions.name.y}px`, width: `${design.positions.name.w}px`, height: `${design.positions.name.h}px`, display: 'flex', alignItems: 'center', justifyContent: alignName }}>
+                            <h2 style={{ fontSize: `${design.positions.name.h * 0.8}px`, margin: 0, padding: '0 8px', fontWeight: 'bold', color: '#0f172a', whiteSpace: 'nowrap' }}>{data.name}</h2>
                         </div>
-                        <div style={{ position: 'absolute', left: `${design.positions.certId.x}px`, top: `${design.positions.certId.y}px`, width: `${design.positions.certId.w}px`, height: `${design.positions.certId.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <p style={{ fontSize: `${design.positions.certId.h * 0.8}px`, margin: 0, fontWeight: 'bold', color: '#1e293b', whiteSpace: 'nowrap' }}>{certId}</p>
+                        <div style={{ position: 'absolute', left: `${design.positions.certId.x}px`, top: `${design.positions.certId.y}px`, width: `${design.positions.certId.w}px`, height: `${design.positions.certId.h}px`, display: 'flex', alignItems: 'center', justifyContent: alignCertId }}>
+                            <p style={{ fontSize: `${design.positions.certId.h * 0.8}px`, margin: 0, padding: '0 8px', fontWeight: 'bold', color: '#1e293b', whiteSpace: 'nowrap' }}>{certId}</p>
                         </div>
                         <div style={{ position: 'absolute', left: `${design.positions.qr.x}px`, top: `${design.positions.qr.y}px`, width: `${design.positions.qr.w}px`, height: `${design.positions.qr.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
                             <QRCodeSVG 
@@ -187,7 +190,7 @@ export default function VerifyPage({ params }) {
                                 size={design.positions.qr.w}
                                 fgColor="#0f172a"
                                 imageSettings={{
-                                    src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
+                                    src: "https://i.ibb.co.com/21s67v2h/maseid.png",
                                     height: (design.positions.qr.w) * 0.25,
                                     width: (design.positions.qr.w) * 0.25,
                                     excavate: true,

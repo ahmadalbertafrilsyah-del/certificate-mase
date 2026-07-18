@@ -18,9 +18,10 @@ function DesignEditor() {
   const [bgImage, setBgImage] = useState('');
   const [orientation, setOrientation] = useState('landscape');
   
+  // Menambahkan properti align (center, left, right)
   const [items, setItems] = useState({
-      name: { x: 300, y: 350, w: 400, h: 60 },
-      certId: { x: 80, y: 700, w: 200, h: 30 },
+      name: { x: 300, y: 350, w: 400, h: 60, align: 'center' },
+      certId: { x: 80, y: 700, w: 200, h: 30, align: 'center' },
       qr: { x: 950, y: 620, w: 120, h: 120 }
   });
 
@@ -69,8 +70,8 @@ function DesignEditor() {
                 const savedPositions = docSnap.data().design.positions;
                 if (savedPositions) {
                     setItems(prev => ({
-                        name: { ...prev.name, ...savedPositions.name },
-                        certId: { ...prev.certId, ...savedPositions.certId },
+                        name: { ...prev.name, ...savedPositions.name, align: savedPositions.name?.align || 'center' },
+                        certId: { ...prev.certId, ...savedPositions.certId, align: savedPositions.certId?.align || 'center' },
                         qr: { ...prev.qr, ...savedPositions.qr }
                     }));
                 }
@@ -118,6 +119,10 @@ function DesignEditor() {
     }
   };
 
+  const changeAlign = (key, alignment) => {
+      setItems(prev => ({ ...prev, [key]: { ...prev[key], align: alignment } }));
+  };
+
   const handleSaveDesign = async () => {
     setSaving(true);
     try {
@@ -160,39 +165,41 @@ function DesignEditor() {
             </div>
         </div>
 
+        <div className="p-4 bg-white border-b border-slate-200 flex gap-6 text-xs shadow-sm z-10 overflow-x-auto justify-center">
+             <div className="flex items-center gap-2 border-r border-slate-200 pr-6">
+                 <span className="font-bold text-slate-600">Posisi Nama:</span>
+                 <div className="flex bg-slate-100 rounded-md p-1">
+                     <button onClick={() => changeAlign('name', 'flex-start')} className={`px-3 py-1 rounded ${items.name.align === 'flex-start' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Kiri</button>
+                     <button onClick={() => changeAlign('name', 'center')} className={`px-3 py-1 rounded ${items.name.align === 'center' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Tengah</button>
+                     <button onClick={() => changeAlign('name', 'flex-end')} className={`px-3 py-1 rounded ${items.name.align === 'flex-end' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Kanan</button>
+                 </div>
+             </div>
+             <div className="flex items-center gap-2">
+                 <span className="font-bold text-slate-600">Posisi Nomor:</span>
+                 <div className="flex bg-slate-100 rounded-md p-1">
+                     <button onClick={() => changeAlign('certId', 'flex-start')} className={`px-3 py-1 rounded ${items.certId.align === 'flex-start' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Kiri</button>
+                     <button onClick={() => changeAlign('certId', 'center')} className={`px-3 py-1 rounded ${items.certId.align === 'center' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Tengah</button>
+                     <button onClick={() => changeAlign('certId', 'flex-end')} className={`px-3 py-1 rounded ${items.certId.align === 'flex-end' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Kanan</button>
+                 </div>
+             </div>
+        </div>
+
         <div ref={containerRef} className="flex-1 overflow-auto p-4 md:p-8 bg-slate-200/50">
-            
             <div 
-                style={{ 
-                    width: `${canvasWidth * scale}px`, 
-                    height: `${canvasHeight * scale}px`,
-                    position: 'relative',
-                    margin: '0 auto' 
-                }}
+                style={{ width: `${canvasWidth * scale}px`, height: `${canvasHeight * scale}px`, position: 'relative', margin: '0 auto' }}
                 className="shrink-0" 
             >
                 <div 
                     className="border border-slate-300 bg-white shadow-2xl overflow-hidden rounded-md shrink-0" 
-                    style={{ 
-                        width: `${canvasWidth}px`, 
-                        height: `${canvasHeight}px`, 
-                        backgroundImage: bgImage ? `url(${bgImage})` : 'none', 
-                        backgroundSize: '100% 100%', 
-                        backgroundPosition: 'center',
-                        transform: `scale(${scale})`, 
-                        transformOrigin: 'top left',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0
-                    }}
+                    style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px`, backgroundImage: bgImage ? `url(${bgImage})` : 'none', backgroundSize: '100% 100%', backgroundPosition: 'center', transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute', top: 0, left: 0 }}
                 >
                     {!bgImage && <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400"><p className="text-2xl font-bold">Ukuran A4 {orientation === 'landscape' ? 'Landscape' : 'Portrait'}</p><p className="text-sm mt-2">Upload desain dari panel atas</p></div>}
                     
                     <Draggable scale={scale} nodeRef={nodeRefName} position={{x: items.name.x, y: items.name.y}} onStop={handleDrag('name')} bounds="parent" cancel=".react-resizable-handle">
                         <div ref={nodeRefName} className="absolute">
                             <Resizable width={items.name.w} height={items.name.h} onResize={onResize('name')}>
-                                <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 flex items-center justify-center relative" style={{width: items.name.w, height: items.name.h}}>
-                                    <h2 style={{fontSize: items.name.h * 0.8}} className="font-bold text-slate-900 whitespace-nowrap">Nama Peserta</h2>
+                                <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 relative flex" style={{width: items.name.w, height: items.name.h, alignItems: 'center', justifyContent: items.name.align}}>
+                                    <h2 style={{fontSize: items.name.h * 0.8}} className="font-bold text-slate-900 whitespace-nowrap px-2">Nama Peserta</h2>
                                 </div>
                             </Resizable>
                         </div>
@@ -201,8 +208,8 @@ function DesignEditor() {
                     <Draggable scale={scale} nodeRef={nodeRefCertId} position={{x: items.certId.x, y: items.certId.y}} onStop={handleDrag('certId')} bounds="parent" cancel=".react-resizable-handle">
                         <div ref={nodeRefCertId} className="absolute">
                             <Resizable width={items.certId.w} height={items.certId.h} onResize={onResize('certId')}>
-                                <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 flex items-center justify-center relative" style={{width: items.certId.w, height: items.certId.h}}>
-                                    <h2 style={{fontSize: items.certId.h * 0.8}} className="font-bold text-slate-900 whitespace-nowrap">Kode ID Peserta</h2>
+                                <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 relative flex" style={{width: items.certId.w, height: items.certId.h, alignItems: 'center', justifyContent: items.certId.align}}>
+                                    <h2 style={{fontSize: items.certId.h * 0.8}} className="font-bold text-slate-900 whitespace-nowrap px-2">Kode ID Peserta</h2>
                                 </div>
                             </Resizable>
                         </div>
@@ -213,17 +220,7 @@ function DesignEditor() {
                             <Resizable width={items.qr.w} height={items.qr.h} onResize={onResize('qr')} lockAspectRatio={true}>
                                 <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 flex flex-col items-center justify-center relative" style={{width: items.qr.w, height: items.qr.h}}>
                                     <div className="pointer-events-none flex flex-col items-center justify-center h-full w-full">
-                                        <QRCodeSVG 
-                                            value="https://mahatma.id/verify" 
-                                            size={items.qr.w} 
-                                            fgColor="#0f172a"
-                                            imageSettings={{
-                                                src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
-                                                height: items.qr.w * 0.25,
-                                                width: items.qr.w * 0.25,
-                                                excavate: true,
-                                            }}
-                                        />
+                                        <QRCodeSVG value="https://mahatma.id/verify" size={items.qr.w} fgColor="#0f172a" imageSettings={{ src: "https://i.ibb.co.com/21s67v2h/maseid.jpg", height: items.qr.w * 0.25, width: items.qr.w * 0.25, excavate: true }} />
                                     </div>
                                 </div>
                             </Resizable>

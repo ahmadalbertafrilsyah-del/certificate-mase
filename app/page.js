@@ -37,7 +37,7 @@ export default function CertificatePortal() {
         <div className="container mx-auto px-4 lg:px-16 flex justify-between items-center max-w-7xl">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.5)] overflow-hidden p-1">
-                 <img src="https://i.ibb.co.com/N2sxbS2k/logo.png" alt="Logo Mahatma" className="w-full h-full object-contain" />
+                 <img src="https://i.ibb.co.com/21s67v2h/maseid.jpg" alt="Logo Mahatma" className="w-full h-full object-contain" />
              </div>
              <div className="flex flex-col">
                 <span className="font-extrabold text-base md:text-lg tracking-tight text-white">Mahatma <span className="text-emerald-400">Academy</span></span>

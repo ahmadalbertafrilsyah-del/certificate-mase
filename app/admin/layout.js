@@ -49,7 +49,7 @@ export default function AdminLayout({ children }) {
         <div className={`hidden md:flex flex-col p-6 border-b border-slate-100 transition-all ${isCollapsed ? 'items-center' : 'items-start'}`}>
             <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-md shrink-0 overflow-hidden p-1 border border-slate-100">
-                    <img src="https://i.ibb.co.com/N2sxbS2k/logo.png" alt="Logo" className="w-full h-full object-contain" />
+                    <img src="https://i.ibb.co.com/21s67v2h/maseid.jpg" alt="Logo" className="w-full h-full object-contain" />
                 </div>
                 {!isCollapsed && <h1 className="text-xl font-black text-slate-900 tracking-wide transition-opacity">Mahatma</h1>}
             </div>

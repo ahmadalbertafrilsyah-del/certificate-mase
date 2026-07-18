@@ -179,7 +179,7 @@ export default function VerifyPage({ params }) {
                             <h2 style={{ fontSize: `${design.positions.name.h * 0.8}px`, margin: 0, fontWeight: 'bold', color: '#0f172a', whiteSpace: 'nowrap' }}>{data.name}</h2>
                         </div>
                         <div style={{ position: 'absolute', left: `${design.positions.certId.x}px`, top: `${design.positions.certId.y}px`, width: `${design.positions.certId.w}px`, height: `${design.positions.certId.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <p style={{ fontSize: `${design.positions.certId.h * 0.8}px`, margin: 0, fontWeight: 'bold', color: '#1e293b', whiteSpace: 'nowrap' }}>No: {certId}</p>
+                            <p style={{ fontSize: `${design.positions.certId.h * 0.8}px`, margin: 0, fontWeight: 'bold', color: '#1e293b', whiteSpace: 'nowrap' }}>{certId}</p>
                         </div>
                         <div style={{ position: 'absolute', left: `${design.positions.qr.x}px`, top: `${design.positions.qr.y}px`, width: `${design.positions.qr.w}px`, height: `${design.positions.qr.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
                             <QRCodeSVG 
@@ -187,7 +187,7 @@ export default function VerifyPage({ params }) {
                                 size={design.positions.qr.w}
                                 fgColor="#0f172a"
                                 imageSettings={{
-                                    src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
+                                    src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
                                     height: (design.positions.qr.w) * 0.25,
                                     width: (design.positions.qr.w) * 0.25,
                                     excavate: true,

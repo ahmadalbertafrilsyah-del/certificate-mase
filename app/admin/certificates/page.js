@@ -15,7 +15,11 @@ export default function AdminCertificates() {
   const [servicesList, setServicesList] = useState([]);
   const [participants, setParticipants] = useState([]); 
   const [loading, setLoading] = useState(false);
+  
+  // State untuk melacak proses kirim email satu per satu secara real-time
   const [isDownloading, setIsDownloading] = useState(false);
+  const [processingEventId, setProcessingEventId] = useState(null);
+  const [progressText, setProgressText] = useState('');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterService, setFilterService] = useState('');
@@ -26,7 +30,6 @@ export default function AdminCertificates() {
   const [editingIndex, setEditingIndex] = useState(-1);
   const [editForm, setEditForm] = useState({ name: '', certId: '', email: '' });
 
-  // States untuk fitur Kelola/Edit Peserta di Daftar Acara
   const [manageEvent, setManageEvent] = useState(null);
   const [eventParticipants, setEventParticipants] = useState([]);
   const [isManagingLoading, setIsManagingLoading] = useState(false);
@@ -138,7 +141,6 @@ export default function AdminCertificates() {
     }
   };
 
-  // --- FUNGSI KELOLA PESERTA DATABASE ---
   const openManageParticipants = async (ev) => {
       setManageEvent(ev);
       setIsManagingLoading(true);
@@ -183,6 +185,7 @@ export default function AdminCertificates() {
     }
     
     setIsDownloading(true);
+    setProcessingEventId(eventData.id);
 
     try {
         const q = query(collection(db, "participants"), where("eventId", "==", eventData.id));
@@ -192,6 +195,7 @@ export default function AdminCertificates() {
         if (eventParticipants.length === 0) {
             alert("Tidak ada data peserta ditemukan untuk acara ini.");
             setIsDownloading(false);
+            setProcessingEventId(null);
             return;
         }
 
@@ -205,6 +209,7 @@ export default function AdminCertificates() {
         let failCount = 0;
 
         for (let i = 0; i < eventParticipants.length; i++) {
+          setProgressText(`Memproses ${i + 1} dari ${eventParticipants.length}...`);
           const p = eventParticipants[i];
           const config = eventData.design;
           const isLandscape = config.orientation !== 'portrait';
@@ -215,6 +220,9 @@ export default function AdminCertificates() {
           const certIdPos = config.positions.certId;
           const qrPos = config.positions.qr;
 
+          const alignName = namePos.align || 'center';
+          const alignCertId = certIdPos.align || 'center';
+
           const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}`;
           const qrSize = qrPos.w || 120;
           
@@ -224,7 +232,7 @@ export default function AdminCertificates() {
                  size={qrSize}
                  fgColor="#0f172a"
                  imageSettings={{
-                     src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
+                     src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
                      height: qrSize * 0.25,
                      width: qrSize * 0.25,
                      excavate: true,
@@ -234,17 +242,19 @@ export default function AdminCertificates() {
 
           hiddenContainer.innerHTML = `
             <div id="cert-render-${i}" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: 100% 100%; background-repeat: no-repeat; position: relative;">
-              <div style="position: absolute; left: ${namePos.x}px; top: ${namePos.y}px; width: ${namePos.w || 400}px; height: ${namePos.h || 60}px; display: flex; align-items: center; justify-content: center;">
-                <h2 style="font-size: ${(namePos.h || 60) * 0.8}px; margin: 0; font-weight: bold; color: #0f172a; white-space: nowrap;">${p.name}</h2>
+              <div style="position: absolute; left: ${namePos.x}px; top: ${namePos.y}px; width: ${namePos.w || 400}px; height: ${namePos.h || 60}px; display: flex; align-items: center; justify-content: ${alignName};">
+                <h2 style="font-size: ${(namePos.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #0f172a; white-space: nowrap;">${p.name}</h2>
               </div>
-              <div style="position: absolute; left: ${certIdPos.x}px; top: ${certIdPos.y}px; width: ${certIdPos.w || 200}px; height: ${certIdPos.h || 30}px; display: flex; align-items: center; justify-content: center;">
-                <p style="font-size: ${(certIdPos.h || 30) * 0.8}px; margin: 0; font-weight: bold; color: #1e293b; white-space: nowrap;">No: ${p.certId}</p>
+              <div style="position: absolute; left: ${certIdPos.x}px; top: ${certIdPos.y}px; width: ${certIdPos.w || 200}px; height: ${certIdPos.h || 30}px; display: flex; align-items: center; justify-content: ${alignCertId};">
+                <p style="font-size: ${(certIdPos.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${p.certId}</p>
               </div>
               <div style="position: absolute; left: ${qrPos.x}px; top: ${qrPos.y}px; width: ${qrPos.w || 120}px; height: ${qrPos.h || 120}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
                  ${qrSvg}
               </div>
             </div>
           `;
+
+          await new Promise(resolve => setTimeout(resolve, 50));
 
           const elementToRender = document.getElementById(`cert-render-${i}`);
           const dataUrl = await toJpeg(elementToRender, { quality: 0.8, pixelRatio: 1.0 });
@@ -259,25 +269,30 @@ export default function AdminCertificates() {
           if (p.email) {
               const pdfBase64 = pdf.output('datauristring');
               
-              const response = await fetch('/api/send-certificate', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      email: p.email,
-                      name: p.name,
-                      certId: p.certId,
-                      pdfBase64: pdfBase64,
-                      eventName: eventData.name
-                  })
-              });
+              try {
+                  const response = await fetch('/api/send-certificate', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          email: p.email,
+                          name: p.name,
+                          certId: p.certId,
+                          pdfBase64: pdfBase64,
+                          eventName: eventData.name
+                      })
+                  });
 
-              if (response.ok) {
-                  successCount++;
-              } else {
+                  if (response.ok) {
+                      successCount++;
+                  } else {
+                      pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+                      failCount++;
+                  }
+              } catch (e) {
                   pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
                   failCount++;
               }
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise(resolve => setTimeout(resolve, 2000));
           } else {
               pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
               failCount++; 
@@ -285,6 +300,7 @@ export default function AdminCertificates() {
         }
 
         document.body.removeChild(hiddenContainer);
+        setProgressText('');
         alert(`Proses Selesai!\nBerhasil dikirim ke Email: ${successCount}\nDiunduh Manual (Gagal/Tidak ada Email): ${failCount}`);
         
     } catch (error) {
@@ -292,6 +308,7 @@ export default function AdminCertificates() {
         alert("Terjadi kesalahan saat memproses sertifikat. Pastikan koneksi internet Anda stabil.");
     }
     setIsDownloading(false);
+    setProcessingEventId(null);
   };
 
   return (
@@ -322,7 +339,7 @@ export default function AdminCertificates() {
                             <tr className="bg-slate-100 text-[10px] uppercase tracking-widest text-slate-500 border-b border-slate-200">
                                 <th className="p-5">Nama & Detail Acara</th>
                                 <th className="p-5 text-center">Peserta</th>
-                                <th className="p-5 text-right">Aksi Desain & PDF</th>
+                                <th className="p-5 text-center">Aksi Desain & PDF</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -347,9 +364,9 @@ export default function AdminCertificates() {
                                         <button 
                                             onClick={() => handleBatchGenerateAndSend(ev)} 
                                             disabled={isDownloading}
-                                            className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50"
+                                            className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50 min-w-[150px]"
                                         >
-                                            {isDownloading ? 'Memproses...' : 'Generate & Email'}
+                                            {isDownloading && processingEventId === ev.id ? progressText : 'Generate & Email'}
                                         </button>
                                         <button 
                                             onClick={() => handleDeleteEvent(ev.id)} 
@@ -473,7 +490,6 @@ export default function AdminCertificates() {
             </form>
         )}
 
-        {/* MODAL KELOLA PESERTA SETELAH ACARA TERSIMPAN */}
         {manageEvent && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">

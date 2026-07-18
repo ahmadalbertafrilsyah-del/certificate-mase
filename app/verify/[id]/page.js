@@ -3,6 +3,8 @@ import { useEffect, useState, useRef, use } from 'react';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
+import jsPDF from 'jspdf';
+import { toJpeg } from 'html-to-image'; 
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function VerifyPage({ params }) {
@@ -12,6 +14,7 @@ export default function VerifyPage({ params }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [liveTime, setLiveTime] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
   
   const containerRef = useRef(null);
   const [scale, setScale] = useState(1);
@@ -68,6 +71,61 @@ export default function VerifyPage({ params }) {
     }
   }, [data]);
 
+  const handleDownloadPDF = async () => {
+    if (!data.event?.design) return alert("Desain sertifikat belum tersedia.");
+    setIsDownloading(true);
+
+    const config = data.event.design;
+    const isLandscape = config.orientation !== 'portrait';
+    const canvasWidth = isLandscape ? 1123 : 794;
+    const canvasHeight = isLandscape ? 794 : 1123;
+    const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`;
+
+    const hiddenContainer = document.createElement('div');
+    hiddenContainer.style.position = 'absolute';
+    hiddenContainer.style.top = '-9999px';
+    hiddenContainer.style.left = '-9999px';
+    document.body.appendChild(hiddenContainer);
+    
+    const alignName = config.positions?.name?.align || 'center';
+    const alignCertId = config.positions?.certId?.align || 'center';
+
+    hiddenContainer.innerHTML = `
+      <div id="cert-render-pdf" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: cover; background-repeat: no-repeat; position: relative;">
+        <div style="position: absolute; left: ${config.positions.name.x}px; top: ${config.positions.name.y}px; width: ${config.positions.name.w}px; height: ${config.positions.name.h}px; display: flex; align-items: center; justify-content: ${alignName};">
+          <h2 style="font-size: ${(config.positions.name.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #0f172a; white-space: nowrap;">${data.name}</h2>
+        </div>
+        <div style="position: absolute; left: ${config.positions.certId.x}px; top: ${config.positions.certId.y}px; width: ${config.positions.certId.w}px; height: ${config.positions.certId.h}px; display: flex; align-items: center; justify-content: ${alignCertId};">
+          <p style="font-size: ${(config.positions.certId.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${certId}</p>
+        </div>
+        <div style="position: absolute; left: ${config.positions.qr.x}px; top: ${config.positions.qr.y}px; width: ${config.positions.qr.w}px; height: ${config.positions.qr.h}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+           <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrLink)}" style="width: 100%; height: 100%; object-fit: contain;" alt="QR" />
+        </div>
+      </div>
+    `;
+
+    try {
+      const elementToRender = document.getElementById('cert-render-pdf');
+      const dataUrl = await toJpeg(elementToRender, { quality: 1.0, pixelRatio: 2 });
+      
+      const pdfFormat = isLandscape ? 'landscape' : 'portrait';
+      const pdfWidth = isLandscape ? 297 : 210;
+      const pdfHeight = isLandscape ? 210 : 297;
+      
+      const pdf = new jsPDF({ orientation: pdfFormat, unit: 'mm', format: 'a4' });
+      pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      
+      const safeName = data.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      pdf.save(`Sertifikat_${safeName}.pdf`);
+    } catch (err) {
+      console.error("Gagal mendownload PDF", err);
+      alert("Terjadi kesalahan saat mengunduh sertifikat.");
+    } finally {
+      document.body.removeChild(hiddenContainer);
+      setIsDownloading(false);
+    }
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center">
         <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-md animate-spin mb-4"></div>
@@ -95,7 +153,6 @@ export default function VerifyPage({ params }) {
   
   const signersList = data.event?.signers || (data.event?.signerName ? [{ name: data.event.signerName, title: data.event.signerTitle }] : []);
 
-  // Variabel perataan teks dinamis
   const alignName = design?.positions?.name?.align || 'center';
   const alignCertId = design?.positions?.certId?.align || 'center';
 
@@ -209,6 +266,13 @@ export default function VerifyPage({ params }) {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+             <button 
+                onClick={handleDownloadPDF} 
+                disabled={isDownloading || !design?.bgUrl}
+                className="inline-block bg-emerald-600 text-white px-8 py-3.5 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-emerald-500 transition shadow-md disabled:bg-emerald-300"
+             >
+                {isDownloading ? 'Menyiapkan Dokumen...' : '📥 Download PDF'}
+             </button>
              <Link href="/" className="inline-block bg-slate-100 text-slate-700 px-8 py-3.5 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition text-center">
                 Cek Dokumen Lainnya
              </Link>

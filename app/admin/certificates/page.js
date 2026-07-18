@@ -16,7 +16,6 @@ export default function AdminCertificates() {
   const [participants, setParticipants] = useState([]); 
   const [loading, setLoading] = useState(false);
   
-  // State untuk melacak proses kirim email satu per satu secara real-time
   const [isDownloading, setIsDownloading] = useState(false);
   const [processingEventId, setProcessingEventId] = useState(null);
   const [progressText, setProgressText] = useState('');
@@ -30,11 +29,19 @@ export default function AdminCertificates() {
   const [editingIndex, setEditingIndex] = useState(-1);
   const [editForm, setEditForm] = useState({ name: '', certId: '', email: '' });
 
+  // Manage Participants Modal
   const [manageEvent, setManageEvent] = useState(null);
   const [eventParticipants, setEventParticipants] = useState([]);
   const [isManagingLoading, setIsManagingLoading] = useState(false);
   const [editingPartId, setEditingPartId] = useState(null);
   const [partEditForm, setPartEditForm] = useState({ name: '', certId: '', email: '' });
+  
+  // Selection State for Email/Generate
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
+
+  // States untuk Tambah Peserta Manual di Modal
+  const [isAddingParticipant, setIsAddingParticipant] = useState(false);
+  const [newParticipantForm, setNewParticipantForm] = useState({ name: '', certId: '', email: '' });
 
   const fetchData = async () => {
     setLoading(true);
@@ -143,11 +150,17 @@ export default function AdminCertificates() {
 
   const openManageParticipants = async (ev) => {
       setManageEvent(ev);
+      setSelectedParticipants([]);
+      setIsAddingParticipant(false);
+      setNewParticipantForm({ name: '', certId: '', email: '' });
       setIsManagingLoading(true);
       try {
           const q = query(collection(db, "participants"), where("eventId", "==", ev.id));
           const snap = await getDocs(q);
-          setEventParticipants(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          const parts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setEventParticipants(parts);
+          // Set checked default semua
+          setSelectedParticipants(parts.map(p => p.id));
       } catch (err) {
           console.error(err);
           alert("Gagal memuat daftar peserta.");
@@ -155,12 +168,44 @@ export default function AdminCertificates() {
       setIsManagingLoading(false);
   };
 
+  const handleAddParticipantDb = async () => {
+      if (!newParticipantForm.name || !newParticipantForm.certId) {
+          return alert("Nama dan Nomor Sertifikat wajib diisi!");
+      }
+      try {
+          const newRef = await addDoc(collection(db, "participants"), {
+              eventId: manageEvent.id,
+              name: newParticipantForm.name,
+              certId: newParticipantForm.certId,
+              email: newParticipantForm.email || '',
+              status: 'verified'
+          });
+          
+          const newParticipant = { id: newRef.id, eventId: manageEvent.id, ...newParticipantForm, status: 'verified' };
+          
+          setEventParticipants(prev => [...prev, newParticipant]);
+          setSelectedParticipants(prev => [...prev, newRef.id]);
+          
+          setIsAddingParticipant(false);
+          setNewParticipantForm({ name: '', certId: '', email: '' });
+          
+          // Update jumlah peserta di data acara secara real-time
+          await updateDoc(doc(db, "events", manageEvent.id), {
+              participantCount: eventParticipants.length + 1
+          });
+          fetchData(); // Refresh tampilan di background
+          
+      } catch (err) {
+          console.error(err);
+          alert("Gagal menambahkan peserta.");
+      }
+  };
+
   const saveParticipantEdit = async (id) => {
       try {
           await updateDoc(doc(db, "participants", id), partEditForm);
           setEventParticipants(prev => prev.map(p => p.id === id ? { ...p, ...partEditForm } : p));
           setEditingPartId(null);
-          alert("Data peserta berhasil diperbarui!");
       } catch (err) {
           console.error(err);
           alert("Gagal memperbarui data peserta.");
@@ -172,6 +217,13 @@ export default function AdminCertificates() {
           try {
               await deleteDoc(doc(db, "participants", id));
               setEventParticipants(prev => prev.filter(p => p.id !== id));
+              setSelectedParticipants(prev => prev.filter(pId => pId !== id));
+              
+              // Update jumlah peserta di data acara
+              await updateDoc(doc(db, "events", manageEvent.id), {
+                  participantCount: eventParticipants.length - 1
+              });
+              fetchData();
           } catch (err) {
               console.error(err);
               alert("Gagal menghapus peserta.");
@@ -179,25 +231,37 @@ export default function AdminCertificates() {
       }
   };
 
-  const handleBatchGenerateAndSend = async (eventData) => {
-    if (!eventData.design || !eventData.design.bgUrl) {
+  // Checkbox logic
+  const handleSelectAll = (e) => {
+      if(e.target.checked) {
+          setSelectedParticipants(eventParticipants.map(p => p.id));
+      } else {
+          setSelectedParticipants([]);
+      }
+  };
+
+  const handleSelectRow = (id) => {
+      if(selectedParticipants.includes(id)) {
+          setSelectedParticipants(prev => prev.filter(item => item !== id));
+      } else {
+          setSelectedParticipants(prev => [...prev, id]);
+      }
+  };
+
+  const handleBatchGenerateAndSend = async () => {
+    if (!manageEvent.design || !manageEvent.design.bgUrl) {
         return alert("Desain sertifikat belum diatur! Klik 'Kanvas Desain' terlebih dahulu.");
+    }
+
+    if(selectedParticipants.length === 0) {
+        return alert("Pilih minimal satu peserta untuk di-generate/diemail.");
     }
     
     setIsDownloading(true);
-    setProcessingEventId(eventData.id);
+    setProcessingEventId(manageEvent.id);
 
     try {
-        const q = query(collection(db, "participants"), where("eventId", "==", eventData.id));
-        const partSnap = await getDocs(q);
-        const eventParticipants = partSnap.docs.map(d => d.data());
-
-        if (eventParticipants.length === 0) {
-            alert("Tidak ada data peserta ditemukan untuk acara ini.");
-            setIsDownloading(false);
-            setProcessingEventId(null);
-            return;
-        }
+        const partsToProcess = eventParticipants.filter(p => selectedParticipants.includes(p.id));
 
         const hiddenContainer = document.createElement('div');
         hiddenContainer.style.position = 'absolute';
@@ -208,10 +272,10 @@ export default function AdminCertificates() {
         let successCount = 0;
         let failCount = 0;
 
-        for (let i = 0; i < eventParticipants.length; i++) {
-          setProgressText(`Memproses ${i + 1} dari ${eventParticipants.length}...`);
-          const p = eventParticipants[i];
-          const config = eventData.design;
+        for (let i = 0; i < partsToProcess.length; i++) {
+          setProgressText(`Memproses ${i + 1} dari ${partsToProcess.length}...`);
+          const p = partsToProcess[i];
+          const config = manageEvent.design;
           const isLandscape = config.orientation !== 'portrait';
           const canvasWidth = isLandscape ? 1123 : 794;
           const canvasHeight = isLandscape ? 794 : 1123;
@@ -232,7 +296,7 @@ export default function AdminCertificates() {
                  size={qrSize}
                  fgColor="#0f172a"
                  imageSettings={{
-                     src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
+                     src: "https://i.ibb.co.com/21s67v2h/maseid.png",
                      height: qrSize * 0.25,
                      width: qrSize * 0.25,
                      excavate: true,
@@ -257,7 +321,7 @@ export default function AdminCertificates() {
           await new Promise(resolve => setTimeout(resolve, 50));
 
           const elementToRender = document.getElementById(`cert-render-${i}`);
-          const dataUrl = await toJpeg(elementToRender, { quality: 0.8, pixelRatio: 1.0 });
+          const dataUrl = await toJpeg(elementToRender, { quality: 0.5, pixelRatio: 1.0 }); 
           
           const pdfFormat = isLandscape ? 'landscape' : 'portrait';
           const pdfWidth = isLandscape ? 297 : 210;
@@ -278,7 +342,7 @@ export default function AdminCertificates() {
                           name: p.name,
                           certId: p.certId,
                           pdfBase64: pdfBase64,
-                          eventName: eventData.name
+                          eventName: manageEvent.name
                       })
                   });
 
@@ -292,7 +356,7 @@ export default function AdminCertificates() {
                   pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
                   failCount++;
               }
-              await new Promise(resolve => setTimeout(resolve, 2000));
+              await new Promise(resolve => setTimeout(resolve, 4000)); 
           } else {
               pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
               failCount++; 
@@ -305,7 +369,7 @@ export default function AdminCertificates() {
         
     } catch (error) {
         console.error(error);
-        alert("Terjadi kesalahan saat memproses sertifikat. Pastikan koneksi internet Anda stabil.");
+        alert("Terjadi kesalahan sistem saat memproses PDF.");
     }
     setIsDownloading(false);
     setProcessingEventId(null);
@@ -339,7 +403,7 @@ export default function AdminCertificates() {
                             <tr className="bg-slate-100 text-[10px] uppercase tracking-widest text-slate-500 border-b border-slate-200">
                                 <th className="p-5">Nama & Detail Acara</th>
                                 <th className="p-5 text-center">Peserta</th>
-                                <th className="p-5 text-center">Aksi Desain & PDF</th>
+                                <th className="p-5 text-right">Aksi Desain & PDF</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -356,18 +420,11 @@ export default function AdminCertificates() {
                                             title="Kelola Peserta"
                                             className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-md text-xs font-bold hover:bg-emerald-600 hover:text-white transition"
                                         >
-                                            👥 Peserta
+                                            👥 Peserta & Generate
                                         </button>
                                         <Link href={`/admin/certificates/design?eventId=${ev.id}`} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-200 transition">
                                             Kanvas Desain
                                         </Link>
-                                        <button 
-                                            onClick={() => handleBatchGenerateAndSend(ev)} 
-                                            disabled={isDownloading}
-                                            className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50 min-w-[150px]"
-                                        >
-                                            {isDownloading && processingEventId === ev.id ? progressText : 'Generate & Email'}
-                                        </button>
                                         <button 
                                             onClick={() => handleDeleteEvent(ev.id)} 
                                             disabled={loading}
@@ -490,16 +547,46 @@ export default function AdminCertificates() {
             </form>
         )}
 
+        {/* MODAL KELOLA PESERTA DAN CHECKBOX GENERATE */}
         {manageEvent && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                         <div>
-                            <h3 className="font-black text-lg text-slate-900">Kelola Peserta</h3>
+                            <h3 className="font-black text-lg text-slate-900">Kelola Peserta & Kirim Sertifikat</h3>
                             <p className="text-xs text-slate-500 mt-1">Acara: {manageEvent.name}</p>
                         </div>
                         <button onClick={() => setManageEvent(null)} className="text-slate-400 hover:text-red-500 font-bold text-xl">&times;</button>
                     </div>
+                    
+                    {/* Panel Aksi Generate Email & Tambah Peserta Manual */}
+                    <div className="px-6 py-4 bg-white border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="text-sm font-bold text-slate-600 flex items-center gap-2">
+                           <input type="checkbox" id="selectAll" className="w-4 h-4 cursor-pointer" 
+                               checked={selectedParticipants.length === eventParticipants.length && eventParticipants.length > 0} 
+                               onChange={handleSelectAll} 
+                           />
+                           <label htmlFor="selectAll" className="cursor-pointer">Pilih Semua ({selectedParticipants.length} Terpilih)</label>
+                        </div>
+                        
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <button 
+                                onClick={() => setIsAddingParticipant(true)} 
+                                disabled={isDownloading || isAddingParticipant}
+                                className="w-full sm:w-auto px-4 py-3 bg-emerald-50 text-emerald-700 rounded-md text-xs font-bold hover:bg-emerald-600 hover:text-white transition disabled:opacity-50"
+                            >
+                                ➕ Tambah Manual
+                            </button>
+                            <button 
+                                onClick={handleBatchGenerateAndSend} 
+                                disabled={isDownloading || selectedParticipants.length === 0}
+                                className="w-full sm:w-auto px-6 py-3 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50 min-w-[150px]"
+                            >
+                                {isDownloading && processingEventId === manageEvent.id ? progressText : `🚀 Generate & Email`}
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
                         {isManagingLoading ? (
                             <p className="text-center text-slate-500 text-sm font-bold py-10">Memuat data peserta...</p>
@@ -508,6 +595,7 @@ export default function AdminCertificates() {
                                 <table className="w-full text-left text-xs border-collapse">
                                     <thead className="bg-slate-100 sticky top-0">
                                         <tr>
+                                            <th className="p-3 border-b border-slate-200 w-10 text-center">#</th>
                                             <th className="p-3 border-b border-slate-200">Nama Lengkap</th>
                                             <th className="p-3 border-b border-slate-200">No. Sertifikat</th>
                                             <th className="p-3 border-b border-slate-200">Email</th>
@@ -515,19 +603,37 @@ export default function AdminCertificates() {
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        {/* Baris Tambah Peserta Baru */}
+                                        {isAddingParticipant && (
+                                            <tr className="border-b border-emerald-100 bg-emerald-50/50">
+                                                <td className="p-2 text-center text-emerald-600 font-bold">+</td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" placeholder="Nama..." value={newParticipantForm.name} onChange={e => setNewParticipantForm({...newParticipantForm, name: e.target.value})} /></td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" placeholder="MASE-..." value={newParticipantForm.certId} onChange={e => setNewParticipantForm({...newParticipantForm, certId: e.target.value})} /></td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" placeholder="Email..." value={newParticipantForm.email} onChange={e => setNewParticipantForm({...newParticipantForm, email: e.target.value})} /></td>
+                                                <td className="p-2 text-right whitespace-nowrap">
+                                                    <button onClick={handleAddParticipantDb} className="text-white bg-emerald-600 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-emerald-500 mr-2 transition">Simpan</button>
+                                                    <button onClick={() => { setIsAddingParticipant(false); setNewParticipantForm({ name: '', certId: '', email: '' }); }} className="text-slate-500 bg-slate-200 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-slate-300 transition">Batal</button>
+                                                </td>
+                                            </tr>
+                                        )}
+
                                         {eventParticipants.map(p => (
                                             editingPartId === p.id ? (
-                                                <tr key={p.id} className="border-b border-slate-50 bg-emerald-50/50">
+                                                <tr key={p.id} className="border-b border-slate-50 bg-blue-50/50">
+                                                    <td className="p-2 text-center">-</td>
                                                     <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={partEditForm.name} onChange={e => setPartEditForm({...partEditForm, name: e.target.value})} /></td>
                                                     <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={partEditForm.certId} onChange={e => setPartEditForm({...partEditForm, certId: e.target.value})} /></td>
                                                     <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={partEditForm.email} onChange={e => setPartEditForm({...partEditForm, email: e.target.value})} /></td>
                                                     <td className="p-2 text-right whitespace-nowrap">
-                                                        <button onClick={() => saveParticipantEdit(p.id)} className="text-white bg-emerald-600 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-emerald-500 mr-2 transition">Simpan</button>
+                                                        <button onClick={() => saveParticipantEdit(p.id)} className="text-white bg-blue-600 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-blue-500 mr-2 transition">Update</button>
                                                         <button onClick={() => setEditingPartId(null)} className="text-slate-500 bg-slate-200 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-slate-300 transition">Batal</button>
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50">
+                                                    <td className="p-3 text-center">
+                                                        <input type="checkbox" className="w-4 h-4 cursor-pointer" checked={selectedParticipants.includes(p.id)} onChange={() => handleSelectRow(p.id)} />
+                                                    </td>
                                                     <td className="p-3 font-bold text-slate-800">{p.name}</td>
                                                     <td className="p-3 font-mono text-emerald-600">{p.certId}</td>
                                                     <td className="p-3 text-slate-500">{p.email || '-'}</td>
@@ -538,8 +644,8 @@ export default function AdminCertificates() {
                                                 </tr>
                                             )
                                         ))}
-                                        {eventParticipants.length === 0 && (
-                                            <tr><td colSpan="4" className="text-center py-10 text-slate-400 font-medium">Tidak ada data peserta.</td></tr>
+                                        {eventParticipants.length === 0 && !isAddingParticipant && (
+                                            <tr><td colSpan="5" className="text-center py-10 text-slate-400 font-medium">Tidak ada data peserta.</td></tr>
                                         )}
                                     </tbody>
                                 </table>

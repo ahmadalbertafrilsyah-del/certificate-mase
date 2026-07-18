@@ -298,82 +298,6 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 </file>
 
-<file path="app/admin/login/page.js">
-"use client";
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase'; 
-import { signInWithEmailAndPassword } from 'firebase/auth';
-
-export default function AdminLogin() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const router = useRouter();
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/admin');
-    } catch (err) {
-      setError("Login gagal! Periksa kembali email dan password Anda.");
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden">
-        <div className="bg-emerald-50 p-10 text-center border-b border-emerald-100">
-            <div className="w-16 h-16 bg-white rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-5 p-1 border border-emerald-100 overflow-hidden">
-                <img src="https://i.ibb.co.com/N2sxbS2k/logo.png" alt="Logo" className="w-full h-full object-contain" />
-            </div>
-            <h1 className="text-2xl font-black text-emerald-900 tracking-wide">Portal Admin</h1>
-            <p className="text-emerald-600 text-[10px] font-bold tracking-widest uppercase mt-2">Mahatma E-Certificate</p>
-        </div>
-        
-        <form onSubmit={handleLogin} className="p-8">
-            {error && <div className="mb-6 p-3 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-lg text-center">{error}</div>}
-            <div className="space-y-5">
-                <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Email Admin</label>
-                    <input 
-                        type="email" required 
-                        value={email} onChange={e => setEmail(e.target.value)}
-                        className="w-full border-2 border-slate-100 p-3.5 rounded-xl focus:border-emerald-500 outline-none text-sm font-bold bg-slate-50 focus:bg-white transition-colors" 
-                        placeholder="admin@mahatma.id" 
-                    />
-                </div>
-                <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Password</label>
-                    <input 
-                        type="password" required 
-                        value={password} onChange={e => setPassword(e.target.value)}
-                        className="w-full border-2 border-slate-100 p-3.5 rounded-xl focus:border-emerald-500 outline-none text-sm font-bold bg-slate-50 focus:bg-white transition-colors" 
-                        placeholder="••••••••" 
-                    />
-                </div>
-            </div>
-            
-            <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full mt-8 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-300 text-white font-bold py-4 rounded-xl transition-all shadow-md text-sm uppercase tracking-wider"
-            >
-                {loading ? 'Memverifikasi...' : 'Masuk ke Dashboard'}
-            </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-</file>
-
 <file path="app/admin/services/page.js">
 "use client";
 import { useState, useEffect } from 'react';
@@ -641,6 +565,117 @@ export default function RootLayout({ children }) {
 }
 </file>
 
+<file path="app/admin/login/page.js">
+"use client";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { auth } from '@/lib/firebase'; 
+import { signInWithEmailAndPassword } from 'firebase/auth';
+
+export default function AdminLogin() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/admin');
+    } catch (err) {
+      setError("Login gagal! Periksa kembali email dan password Anda.");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden">
+        <div className="bg-emerald-50 p-10 text-center border-b border-emerald-100">
+            <div className="w-16 h-16 bg-white rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-5 p-1 border border-emerald-100 overflow-hidden">
+                <img src="https://i.ibb.co.com/21s67v2h/maseid.jpg" alt="Logo" className="w-full h-full object-contain" />
+            </div>
+            <h1 className="text-2xl font-black text-emerald-900 tracking-wide">Portal Admin</h1>
+            <p className="text-emerald-600 text-[10px] font-bold tracking-widest uppercase mt-2">Mahatma E-Certificate</p>
+        </div>
+        
+        <form onSubmit={handleLogin} className="p-8">
+            {error && <div className="mb-6 p-3 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-lg text-center">{error}</div>}
+            <div className="space-y-5">
+                <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Email Admin</label>
+                    <input 
+                        type="email" required 
+                        value={email} onChange={e => setEmail(e.target.value)}
+                        className="w-full border-2 border-slate-100 p-3.5 rounded-xl focus:border-emerald-500 outline-none text-sm font-bold bg-slate-50 focus:bg-white transition-colors" 
+                        placeholder="admin@mahatma.id" 
+                    />
+                </div>
+                <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Password</label>
+                    <input 
+                        type="password" required 
+                        value={password} onChange={e => setPassword(e.target.value)}
+                        className="w-full border-2 border-slate-100 p-3.5 rounded-xl focus:border-emerald-500 outline-none text-sm font-bold bg-slate-50 focus:bg-white transition-colors" 
+                        placeholder="••••••••" 
+                    />
+                </div>
+            </div>
+            
+            <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full mt-8 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-300 text-white font-bold py-4 rounded-xl transition-all shadow-md text-sm uppercase tracking-wider"
+            >
+                {loading ? 'Memverifikasi...' : 'Masuk ke Dashboard'}
+            </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "certificate-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "cloudinary": "^2.10.0",
+    "firebase": "^12.16.0",
+    "framer-motion": "^12.42.2",
+    "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
+    "next": "16.2.10",
+    "nodemailer": "^9.0.3",
+    "qrcode.react": "^4.2.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-draggable": "^4.7.0",
+    "react-resizable": "^4.0.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "^4"
+  }
+}
+</file>
+
 <file path="app/admin/layout.js">
 "use client";
 import Link from 'next/link';
@@ -693,7 +728,7 @@ export default function AdminLayout({ children }) {
         <div className={`hidden md:flex flex-col p-6 border-b border-slate-100 transition-all ${isCollapsed ? 'items-center' : 'items-start'}`}>
             <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-md shrink-0 overflow-hidden p-1 border border-slate-100">
-                    <img src="https://i.ibb.co.com/N2sxbS2k/logo.png" alt="Logo" className="w-full h-full object-contain" />
+                    <img src="https://i.ibb.co.com/21s67v2h/maseid.jpg" alt="Logo" className="w-full h-full object-contain" />
                 </div>
                 {!isCollapsed && <h1 className="text-xl font-black text-slate-900 tracking-wide transition-opacity">Mahatma</h1>}
             </div>
@@ -771,7 +806,7 @@ export default function CertificatePortal() {
         <div className="container mx-auto px-4 lg:px-16 flex justify-between items-center max-w-7xl">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.5)] overflow-hidden p-1">
-                 <img src="https://i.ibb.co.com/N2sxbS2k/logo.png" alt="Logo Mahatma" className="w-full h-full object-contain" />
+                 <img src="https://i.ibb.co.com/21s67v2h/maseid.jpg" alt="Logo Mahatma" className="w-full h-full object-contain" />
              </div>
              <div className="flex flex-col">
                 <span className="font-extrabold text-base md:text-lg tracking-tight text-white">Mahatma <span className="text-emerald-400">Academy</span></span>
@@ -854,41 +889,6 @@ export default function CertificatePortal() {
 }
 </file>
 
-<file path="package.json">
-{
-  "name": "certificate-web",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "cloudinary": "^2.10.0",
-    "firebase": "^12.16.0",
-    "framer-motion": "^12.42.2",
-    "html-to-image": "^1.11.13",
-    "jspdf": "^4.2.1",
-    "next": "16.2.10",
-    "nodemailer": "^9.0.3",
-    "qrcode.react": "^4.2.0",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "react-draggable": "^4.7.0",
-    "react-resizable": "^4.0.2",
-    "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.10",
-    "tailwindcss": "^4"
-  }
-}
-</file>
-
 <file path="app/admin/certificates/design/page.js">
 "use client";
 import { useState, useEffect, Suspense, useRef } from 'react';
@@ -910,9 +910,10 @@ function DesignEditor() {
   const [bgImage, setBgImage] = useState('');
   const [orientation, setOrientation] = useState('landscape');
   
+  // Menambahkan properti align (center, left, right)
   const [items, setItems] = useState({
-      name: { x: 300, y: 350, w: 400, h: 60 },
-      certId: { x: 80, y: 700, w: 200, h: 30 },
+      name: { x: 300, y: 350, w: 400, h: 60, align: 'center' },
+      certId: { x: 80, y: 700, w: 200, h: 30, align: 'center' },
       qr: { x: 950, y: 620, w: 120, h: 120 }
   });
 
@@ -961,8 +962,8 @@ function DesignEditor() {
                 const savedPositions = docSnap.data().design.positions;
                 if (savedPositions) {
                     setItems(prev => ({
-                        name: { ...prev.name, ...savedPositions.name },
-                        certId: { ...prev.certId, ...savedPositions.certId },
+                        name: { ...prev.name, ...savedPositions.name, align: savedPositions.name?.align || 'center' },
+                        certId: { ...prev.certId, ...savedPositions.certId, align: savedPositions.certId?.align || 'center' },
                         qr: { ...prev.qr, ...savedPositions.qr }
                     }));
                 }
@@ -1010,6 +1011,10 @@ function DesignEditor() {
     }
   };
 
+  const changeAlign = (key, alignment) => {
+      setItems(prev => ({ ...prev, [key]: { ...prev[key], align: alignment } }));
+  };
+
   const handleSaveDesign = async () => {
     setSaving(true);
     try {
@@ -1052,39 +1057,41 @@ function DesignEditor() {
             </div>
         </div>
 
+        <div className="p-4 bg-white border-b border-slate-200 flex gap-6 text-xs shadow-sm z-10 overflow-x-auto justify-center">
+             <div className="flex items-center gap-2 border-r border-slate-200 pr-6">
+                 <span className="font-bold text-slate-600">Posisi Nama:</span>
+                 <div className="flex bg-slate-100 rounded-md p-1">
+                     <button onClick={() => changeAlign('name', 'flex-start')} className={`px-3 py-1 rounded ${items.name.align === 'flex-start' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Kiri</button>
+                     <button onClick={() => changeAlign('name', 'center')} className={`px-3 py-1 rounded ${items.name.align === 'center' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Tengah</button>
+                     <button onClick={() => changeAlign('name', 'flex-end')} className={`px-3 py-1 rounded ${items.name.align === 'flex-end' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Kanan</button>
+                 </div>
+             </div>
+             <div className="flex items-center gap-2">
+                 <span className="font-bold text-slate-600">Posisi Nomor:</span>
+                 <div className="flex bg-slate-100 rounded-md p-1">
+                     <button onClick={() => changeAlign('certId', 'flex-start')} className={`px-3 py-1 rounded ${items.certId.align === 'flex-start' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Kiri</button>
+                     <button onClick={() => changeAlign('certId', 'center')} className={`px-3 py-1 rounded ${items.certId.align === 'center' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Tengah</button>
+                     <button onClick={() => changeAlign('certId', 'flex-end')} className={`px-3 py-1 rounded ${items.certId.align === 'flex-end' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}>Kanan</button>
+                 </div>
+             </div>
+        </div>
+
         <div ref={containerRef} className="flex-1 overflow-auto p-4 md:p-8 bg-slate-200/50">
-            
             <div 
-                style={{ 
-                    width: `${canvasWidth * scale}px`, 
-                    height: `${canvasHeight * scale}px`,
-                    position: 'relative',
-                    margin: '0 auto' 
-                }}
+                style={{ width: `${canvasWidth * scale}px`, height: `${canvasHeight * scale}px`, position: 'relative', margin: '0 auto' }}
                 className="shrink-0" 
             >
                 <div 
                     className="border border-slate-300 bg-white shadow-2xl overflow-hidden rounded-md shrink-0" 
-                    style={{ 
-                        width: `${canvasWidth}px`, 
-                        height: `${canvasHeight}px`, 
-                        backgroundImage: bgImage ? `url(${bgImage})` : 'none', 
-                        backgroundSize: '100% 100%', 
-                        backgroundPosition: 'center',
-                        transform: `scale(${scale})`, 
-                        transformOrigin: 'top left',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0
-                    }}
+                    style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px`, backgroundImage: bgImage ? `url(${bgImage})` : 'none', backgroundSize: '100% 100%', backgroundPosition: 'center', transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute', top: 0, left: 0 }}
                 >
                     {!bgImage && <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400"><p className="text-2xl font-bold">Ukuran A4 {orientation === 'landscape' ? 'Landscape' : 'Portrait'}</p><p className="text-sm mt-2">Upload desain dari panel atas</p></div>}
                     
                     <Draggable scale={scale} nodeRef={nodeRefName} position={{x: items.name.x, y: items.name.y}} onStop={handleDrag('name')} bounds="parent" cancel=".react-resizable-handle">
                         <div ref={nodeRefName} className="absolute">
                             <Resizable width={items.name.w} height={items.name.h} onResize={onResize('name')}>
-                                <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 flex items-center justify-center relative" style={{width: items.name.w, height: items.name.h}}>
-                                    <h2 style={{fontSize: items.name.h * 0.8}} className="font-bold text-slate-900 whitespace-nowrap">Nama Peserta</h2>
+                                <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 relative flex" style={{width: items.name.w, height: items.name.h, alignItems: 'center', justifyContent: items.name.align}}>
+                                    <h2 style={{fontSize: items.name.h * 0.8}} className="font-bold text-slate-900 whitespace-nowrap px-2">Nama Peserta</h2>
                                 </div>
                             </Resizable>
                         </div>
@@ -1093,8 +1100,8 @@ function DesignEditor() {
                     <Draggable scale={scale} nodeRef={nodeRefCertId} position={{x: items.certId.x, y: items.certId.y}} onStop={handleDrag('certId')} bounds="parent" cancel=".react-resizable-handle">
                         <div ref={nodeRefCertId} className="absolute">
                             <Resizable width={items.certId.w} height={items.certId.h} onResize={onResize('certId')}>
-                                <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 flex items-center justify-center relative" style={{width: items.certId.w, height: items.certId.h}}>
-                                    <h2 style={{fontSize: items.certId.h * 0.8}} className="font-bold text-slate-900 whitespace-nowrap">Kode ID Peserta</h2>
+                                <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 relative flex" style={{width: items.certId.w, height: items.certId.h, alignItems: 'center', justifyContent: items.certId.align}}>
+                                    <h2 style={{fontSize: items.certId.h * 0.8}} className="font-bold text-slate-900 whitespace-nowrap px-2">Kode ID Peserta</h2>
                                 </div>
                             </Resizable>
                         </div>
@@ -1105,17 +1112,7 @@ function DesignEditor() {
                             <Resizable width={items.qr.w} height={items.qr.h} onResize={onResize('qr')} lockAspectRatio={true}>
                                 <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 flex flex-col items-center justify-center relative" style={{width: items.qr.w, height: items.qr.h}}>
                                     <div className="pointer-events-none flex flex-col items-center justify-center h-full w-full">
-                                        <QRCodeSVG 
-                                            value="https://mahatma.id/verify" 
-                                            size={items.qr.w} 
-                                            fgColor="#0f172a"
-                                            imageSettings={{
-                                                src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
-                                                height: items.qr.w * 0.25,
-                                                width: items.qr.w * 0.25,
-                                                excavate: true,
-                                            }}
-                                        />
+                                        <QRCodeSVG value="https://mahatma.id/verify" size={items.qr.w} fgColor="#0f172a" imageSettings={{ src: "https://i.ibb.co.com/21s67v2h/maseid.jpg", height: items.qr.w * 0.25, width: items.qr.w * 0.25, excavate: true }} />
                                     </div>
                                 </div>
                             </Resizable>
@@ -1130,226 +1127,6 @@ function DesignEditor() {
 
 export default function CertificateDesignerPage() {
     return <Suspense fallback={<div className="p-10 text-center font-bold">Memuat...</div>}><DesignEditor /></Suspense>
-}
-</file>
-
-<file path="app/verify/[id]/page.js">
-"use client";
-import { useEffect, useState, useRef, use } from 'react';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import Link from 'next/link';
-import { QRCodeSVG } from 'qrcode.react';
-
-export default function VerifyPage({ params }) {
-  const resolvedParams = use(params);
-  const certId = resolvedParams.id;
-  
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [liveTime, setLiveTime] = useState('');
-  
-  const containerRef = useRef(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    const timer = setInterval(() => setLiveTime(new Date().toLocaleString('id-ID')), 1000);
-    
-    const fetchCertificate = async () => {
-      try {
-        const q = query(collection(db, "participants"), where("certId", "==", certId));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          const participantData = querySnapshot.docs[0].data();
-          const eventRef = doc(db, "events", participantData.eventId);
-          const eventSnap = await getDoc(eventRef);
-          
-          setData({ 
-            ...participantData, 
-            event: eventSnap.exists() ? eventSnap.data() : null 
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-      setLoading(false);
-    };
-    
-    fetchCertificate();
-    return () => clearInterval(timer);
-  }, [certId]);
-
-  useEffect(() => {
-    if (data && data.event?.design) {
-      const handleResize = () => {
-        if (containerRef.current) {
-          const availableWidth = containerRef.current.clientWidth;
-          const isLandscape = data.event.design.orientation !== 'portrait';
-          const canvasWidth = isLandscape ? 1123 : 794;
-          
-          const safeWidth = availableWidth - 4; 
-          const newScale = safeWidth / canvasWidth;
-          
-          setScale(newScale < 1 ? newScale : 1);
-        }
-      };
-
-      handleResize();
-      window.addEventListener('resize', handleResize);
-      setTimeout(handleResize, 100);
-      setTimeout(handleResize, 500);
-
-      return () => window.removeEventListener('resize', handleResize);
-    }
-  }, [data]);
-
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center">
-        <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-md animate-spin mb-4"></div>
-        <p className="text-slate-500 font-bold tracking-widest text-sm uppercase">Memvalidasi Data...</p>
-    </div>
-  );
-
-  if (!data) return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white p-8 rounded-md shadow-xl border-t-4 border-red-500 text-center">
-        <div className="w-16 h-16 bg-red-100 text-red-500 rounded-md flex items-center justify-center mx-auto mb-4 text-3xl">❌</div>
-        <h1 className="text-2xl font-black text-slate-900 mb-2">Dokumen Tidak Valid</h1>
-        <p className="text-slate-500 text-sm mb-8 leading-relaxed">Nomor registrasi <b>{certId}</b> tidak ditemukan dalam basis data resmi Mahatma Academy. Mohon periksa kembali nomor yang Anda masukkan.</p>
-        <Link href="/" className="inline-block bg-slate-900 text-white px-8 py-3 rounded-md font-bold text-sm hover:bg-slate-800 transition">
-            Kembali ke Pencarian
-        </Link>
-      </div>
-    </div>
-  );
-
-  const isLandscape = data.event?.design?.orientation !== 'portrait';
-  const canvasWidth = isLandscape ? 1123 : 794;
-  const canvasHeight = isLandscape ? 794 : 1123;
-  const design = data.event?.design;
-  
-  // Mendukung acara lama yang menggunakan 1 signer maupun acara baru yang menggunakan multiple signers
-  const signersList = data.event?.signers || (data.event?.signerName ? [{ name: data.event.signerName, title: data.event.signerTitle }] : []);
-
-  return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 flex flex-col items-center">
-      <div className="max-w-4xl w-full bg-white rounded-md shadow-xl border border-slate-100 overflow-hidden">
-        
-        <div className="bg-emerald-600 p-8 text-center text-white relative overflow-hidden">
-           <div className="absolute inset-0 bg-white/20 w-16 skew-x-[45deg] animate-[slide_3s_infinite]"></div>
-           <div className="w-16 h-16 bg-white text-emerald-600 rounded-md flex items-center justify-center mx-auto mb-4 text-3xl shadow-lg">✓</div>
-           <h1 className="text-2xl font-black uppercase tracking-widest mb-1">Sertifikat Valid</h1>
-           <p className="text-xs text-emerald-100 opacity-90 tracking-wider">Diperiksa: {liveTime}</p>
-        </div>
-        
-        <div className="p-6 md:p-10">
-          
-          <div className="mb-10">
-             <h3 className="text-lg font-black text-slate-900 mb-4 border-b border-slate-200 pb-2">Informasi Dokumen</h3>
-             <div className="border border-slate-200 rounded-md overflow-hidden">
-                <table className="w-full text-left text-sm">
-                   <tbody>
-                      <tr className="border-b border-slate-100 bg-slate-50">
-                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Nama Peserta</th>
-                         <td className="py-3 px-4 font-black text-slate-900">{data.name}</td>
-                      </tr>
-                      <tr className="border-b border-slate-100">
-                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Nomor Sertifikat</th>
-                         <td className="py-3 px-4 font-bold text-emerald-700 font-mono">{certId}</td>
-                      </tr>
-                      <tr className="border-b border-slate-100 bg-slate-50">
-                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Nama Kegiatan</th>
-                         <td className="py-3 px-4 font-medium text-slate-800">{data.event?.name}</td>
-                      </tr>
-                      <tr className="border-b border-slate-100">
-                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Tanggal Pelaksanaan</th>
-                         <td className="py-3 px-4 font-medium text-slate-800">{data.event?.date}</td>
-                      </tr>
-                      <tr>
-                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Tempat Pelaksanaan</th>
-                         <td className="py-3 px-4 font-medium text-slate-800">{data.event?.location}</td>
-                      </tr>
-                   </tbody>
-                </table>
-             </div>
-          </div>
-
-          <div className="mb-10">
-            {signersList.map((signer, idx) => (
-                <div key={idx} className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-6 flex flex-col md:flex-row items-center gap-6">
-                    <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl shrink-0 shadow-md">
-                       ✒️
-                    </div>
-                    <div className="text-center md:text-left">
-                        <h4 className="text-sm font-bold text-blue-900 uppercase tracking-widest mb-1">Tanda Tangan Elektronik {signersList.length > 1 ? idx + 1 : ''}</h4>
-                        <p className="text-xs text-blue-700 mb-2">Dokumen ini telah disahkan secara digital (terenkripsi) oleh:</p>
-                        <p className="text-lg font-black text-slate-900">{signer.name || "Nama Tidak Tersedia"}</p>
-                        <p className="text-sm font-bold text-slate-600">{signer.title || "Jabatan Tidak Tersedia"}</p>
-                    </div>
-                </div>
-            ))}
-          </div>
-
-          {design && design.bgUrl ? (
-             <div className="mb-8 border border-slate-200 rounded-md overflow-hidden bg-white">
-               <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-widest text-center">
-                 Preview Dokumen Asli
-               </div>
-               
-               <div className="p-4 md:p-8 flex justify-center items-center bg-slate-100/50 w-full overflow-hidden">
-                 <div ref={containerRef} className="w-full flex justify-center">
-                   <div 
-                     className="relative transition-all duration-300"
-                     style={{ width: `${canvasWidth * scale}px`, height: `${canvasHeight * scale}px` }}
-                   >
-                     <div 
-                       className="absolute top-0 left-0 bg-white shadow-lg border border-slate-200 overflow-hidden origin-top-left"
-                       style={{ 
-                         width: `${canvasWidth}px`, height: `${canvasHeight}px`, 
-                         backgroundImage: `url(${design.bgUrl})`, backgroundSize: '100% 100%',
-                         transform: `scale(${scale})` 
-                       }}
-                     >
-                        <div style={{ position: 'absolute', left: `${design.positions.name.x}px`, top: `${design.positions.name.y}px`, width: `${design.positions.name.w}px`, height: `${design.positions.name.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <h2 style={{ fontSize: `${design.positions.name.h * 0.8}px`, margin: 0, fontWeight: 'bold', color: '#0f172a', whiteSpace: 'nowrap' }}>{data.name}</h2>
-                        </div>
-                        <div style={{ position: 'absolute', left: `${design.positions.certId.x}px`, top: `${design.positions.certId.y}px`, width: `${design.positions.certId.w}px`, height: `${design.positions.certId.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <p style={{ fontSize: `${design.positions.certId.h * 0.8}px`, margin: 0, fontWeight: 'bold', color: '#1e293b', whiteSpace: 'nowrap' }}>{certId}</p>
-                        </div>
-                        <div style={{ position: 'absolute', left: `${design.positions.qr.x}px`, top: `${design.positions.qr.y}px`, width: `${design.positions.qr.w}px`, height: `${design.positions.qr.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                            <QRCodeSVG 
-                                value={`${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`} 
-                                size={design.positions.qr.w}
-                                fgColor="#0f172a"
-                                imageSettings={{
-                                    src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
-                                    height: (design.positions.qr.w) * 0.25,
-                                    width: (design.positions.qr.w) * 0.25,
-                                    excavate: true,
-                                }}
-                            />
-                        </div>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-             </div>
-          ) : (
-             <div className="mb-8 p-6 text-center border-2 border-dashed border-slate-200 rounded-md text-slate-400 text-sm">
-                Desain sertifikat belum tersedia.
-             </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
-             <Link href="/" className="inline-block bg-slate-100 text-slate-700 px-8 py-3.5 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition text-center">
-                Cek Dokumen Lainnya
-             </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 </file>
 
@@ -1371,7 +1148,11 @@ export default function AdminCertificates() {
   const [servicesList, setServicesList] = useState([]);
   const [participants, setParticipants] = useState([]); 
   const [loading, setLoading] = useState(false);
+  
+  // State untuk melacak proses kirim email satu per satu secara real-time
   const [isDownloading, setIsDownloading] = useState(false);
+  const [processingEventId, setProcessingEventId] = useState(null);
+  const [progressText, setProgressText] = useState('');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterService, setFilterService] = useState('');
@@ -1382,7 +1163,6 @@ export default function AdminCertificates() {
   const [editingIndex, setEditingIndex] = useState(-1);
   const [editForm, setEditForm] = useState({ name: '', certId: '', email: '' });
 
-  // States untuk fitur Kelola/Edit Peserta di Daftar Acara
   const [manageEvent, setManageEvent] = useState(null);
   const [eventParticipants, setEventParticipants] = useState([]);
   const [isManagingLoading, setIsManagingLoading] = useState(false);
@@ -1494,7 +1274,6 @@ export default function AdminCertificates() {
     }
   };
 
-  // --- FUNGSI KELOLA PESERTA DATABASE ---
   const openManageParticipants = async (ev) => {
       setManageEvent(ev);
       setIsManagingLoading(true);
@@ -1539,6 +1318,7 @@ export default function AdminCertificates() {
     }
     
     setIsDownloading(true);
+    setProcessingEventId(eventData.id);
 
     try {
         const q = query(collection(db, "participants"), where("eventId", "==", eventData.id));
@@ -1548,6 +1328,7 @@ export default function AdminCertificates() {
         if (eventParticipants.length === 0) {
             alert("Tidak ada data peserta ditemukan untuk acara ini.");
             setIsDownloading(false);
+            setProcessingEventId(null);
             return;
         }
 
@@ -1561,6 +1342,7 @@ export default function AdminCertificates() {
         let failCount = 0;
 
         for (let i = 0; i < eventParticipants.length; i++) {
+          setProgressText(`Memproses ${i + 1} dari ${eventParticipants.length}...`);
           const p = eventParticipants[i];
           const config = eventData.design;
           const isLandscape = config.orientation !== 'portrait';
@@ -1571,6 +1353,9 @@ export default function AdminCertificates() {
           const certIdPos = config.positions.certId;
           const qrPos = config.positions.qr;
 
+          const alignName = namePos.align || 'center';
+          const alignCertId = certIdPos.align || 'center';
+
           const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}`;
           const qrSize = qrPos.w || 120;
           
@@ -1580,7 +1365,7 @@ export default function AdminCertificates() {
                  size={qrSize}
                  fgColor="#0f172a"
                  imageSettings={{
-                     src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
+                     src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
                      height: qrSize * 0.25,
                      width: qrSize * 0.25,
                      excavate: true,
@@ -1590,17 +1375,19 @@ export default function AdminCertificates() {
 
           hiddenContainer.innerHTML = `
             <div id="cert-render-${i}" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: 100% 100%; background-repeat: no-repeat; position: relative;">
-              <div style="position: absolute; left: ${namePos.x}px; top: ${namePos.y}px; width: ${namePos.w || 400}px; height: ${namePos.h || 60}px; display: flex; align-items: center; justify-content: center;">
-                <h2 style="font-size: ${(namePos.h || 60) * 0.8}px; margin: 0; font-weight: bold; color: #0f172a; white-space: nowrap;">${p.name}</h2>
+              <div style="position: absolute; left: ${namePos.x}px; top: ${namePos.y}px; width: ${namePos.w || 400}px; height: ${namePos.h || 60}px; display: flex; align-items: center; justify-content: ${alignName};">
+                <h2 style="font-size: ${(namePos.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #0f172a; white-space: nowrap;">${p.name}</h2>
               </div>
-              <div style="position: absolute; left: ${certIdPos.x}px; top: ${certIdPos.y}px; width: ${certIdPos.w || 200}px; height: ${certIdPos.h || 30}px; display: flex; align-items: center; justify-content: center;">
-                <p style="font-size: ${(certIdPos.h || 30) * 0.8}px; margin: 0; font-weight: bold; color: #1e293b; white-space: nowrap;">${p.certId}</p>
+              <div style="position: absolute; left: ${certIdPos.x}px; top: ${certIdPos.y}px; width: ${certIdPos.w || 200}px; height: ${certIdPos.h || 30}px; display: flex; align-items: center; justify-content: ${alignCertId};">
+                <p style="font-size: ${(certIdPos.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${p.certId}</p>
               </div>
               <div style="position: absolute; left: ${qrPos.x}px; top: ${qrPos.y}px; width: ${qrPos.w || 120}px; height: ${qrPos.h || 120}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
                  ${qrSvg}
               </div>
             </div>
           `;
+
+          await new Promise(resolve => setTimeout(resolve, 50));
 
           const elementToRender = document.getElementById(`cert-render-${i}`);
           const dataUrl = await toJpeg(elementToRender, { quality: 0.8, pixelRatio: 1.0 });
@@ -1615,25 +1402,30 @@ export default function AdminCertificates() {
           if (p.email) {
               const pdfBase64 = pdf.output('datauristring');
               
-              const response = await fetch('/api/send-certificate', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      email: p.email,
-                      name: p.name,
-                      certId: p.certId,
-                      pdfBase64: pdfBase64,
-                      eventName: eventData.name
-                  })
-              });
+              try {
+                  const response = await fetch('/api/send-certificate', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          email: p.email,
+                          name: p.name,
+                          certId: p.certId,
+                          pdfBase64: pdfBase64,
+                          eventName: eventData.name
+                      })
+                  });
 
-              if (response.ok) {
-                  successCount++;
-              } else {
+                  if (response.ok) {
+                      successCount++;
+                  } else {
+                      pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+                      failCount++;
+                  }
+              } catch (e) {
                   pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
                   failCount++;
               }
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise(resolve => setTimeout(resolve, 2000));
           } else {
               pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
               failCount++; 
@@ -1641,6 +1433,7 @@ export default function AdminCertificates() {
         }
 
         document.body.removeChild(hiddenContainer);
+        setProgressText('');
         alert(`Proses Selesai!\nBerhasil dikirim ke Email: ${successCount}\nDiunduh Manual (Gagal/Tidak ada Email): ${failCount}`);
         
     } catch (error) {
@@ -1648,6 +1441,7 @@ export default function AdminCertificates() {
         alert("Terjadi kesalahan saat memproses sertifikat. Pastikan koneksi internet Anda stabil.");
     }
     setIsDownloading(false);
+    setProcessingEventId(null);
   };
 
   return (
@@ -1678,7 +1472,7 @@ export default function AdminCertificates() {
                             <tr className="bg-slate-100 text-[10px] uppercase tracking-widest text-slate-500 border-b border-slate-200">
                                 <th className="p-5">Nama & Detail Acara</th>
                                 <th className="p-5 text-center">Peserta</th>
-                                <th className="p-5 text-right">Aksi Desain & PDF</th>
+                                <th className="p-5 text-center">Aksi Desain & PDF</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1703,9 +1497,9 @@ export default function AdminCertificates() {
                                         <button 
                                             onClick={() => handleBatchGenerateAndSend(ev)} 
                                             disabled={isDownloading}
-                                            className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50"
+                                            className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50 min-w-[150px]"
                                         >
-                                            {isDownloading ? 'Memproses...' : 'Generate & Email'}
+                                            {isDownloading && processingEventId === ev.id ? progressText : 'Generate & Email'}
                                         </button>
                                         <button 
                                             onClick={() => handleDeleteEvent(ev.id)} 
@@ -1829,7 +1623,6 @@ export default function AdminCertificates() {
             </form>
         )}
 
-        {/* MODAL KELOLA PESERTA SETELAH ACARA TERSIMPAN */}
         {manageEvent && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
@@ -1889,6 +1682,229 @@ export default function AdminCertificates() {
                 </div>
             </div>
         )}
+    </div>
+  );
+}
+</file>
+
+<file path="app/verify/[id]/page.js">
+"use client";
+import { useEffect, useState, useRef, use } from 'react';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import Link from 'next/link';
+import { QRCodeSVG } from 'qrcode.react';
+
+export default function VerifyPage({ params }) {
+  const resolvedParams = use(params);
+  const certId = resolvedParams.id;
+  
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [liveTime, setLiveTime] = useState('');
+  
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const timer = setInterval(() => setLiveTime(new Date().toLocaleString('id-ID')), 1000);
+    
+    const fetchCertificate = async () => {
+      try {
+        const q = query(collection(db, "participants"), where("certId", "==", certId));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const participantData = querySnapshot.docs[0].data();
+          const eventRef = doc(db, "events", participantData.eventId);
+          const eventSnap = await getDoc(eventRef);
+          
+          setData({ 
+            ...participantData, 
+            event: eventSnap.exists() ? eventSnap.data() : null 
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+      setLoading(false);
+    };
+    
+    fetchCertificate();
+    return () => clearInterval(timer);
+  }, [certId]);
+
+  useEffect(() => {
+    if (data && data.event?.design) {
+      const handleResize = () => {
+        if (containerRef.current) {
+          const availableWidth = containerRef.current.clientWidth;
+          const isLandscape = data.event.design.orientation !== 'portrait';
+          const canvasWidth = isLandscape ? 1123 : 794;
+          
+          const safeWidth = availableWidth - 4; 
+          const newScale = safeWidth / canvasWidth;
+          
+          setScale(newScale < 1 ? newScale : 1);
+        }
+      };
+
+      handleResize();
+      window.addEventListener('resize', handleResize);
+      setTimeout(handleResize, 100);
+      setTimeout(handleResize, 500);
+
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [data]);
+
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center">
+        <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-md animate-spin mb-4"></div>
+        <p className="text-slate-500 font-bold tracking-widest text-sm uppercase">Memvalidasi Data...</p>
+    </div>
+  );
+
+  if (!data) return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white p-8 rounded-md shadow-xl border-t-4 border-red-500 text-center">
+        <div className="w-16 h-16 bg-red-100 text-red-500 rounded-md flex items-center justify-center mx-auto mb-4 text-3xl">❌</div>
+        <h1 className="text-2xl font-black text-slate-900 mb-2">Dokumen Tidak Valid</h1>
+        <p className="text-slate-500 text-sm mb-8 leading-relaxed">Nomor registrasi <b>{certId}</b> tidak ditemukan dalam basis data resmi Mahatma Academy. Mohon periksa kembali nomor yang Anda masukkan.</p>
+        <Link href="/" className="inline-block bg-slate-900 text-white px-8 py-3 rounded-md font-bold text-sm hover:bg-slate-800 transition">
+            Kembali ke Pencarian
+        </Link>
+      </div>
+    </div>
+  );
+
+  const isLandscape = data.event?.design?.orientation !== 'portrait';
+  const canvasWidth = isLandscape ? 1123 : 794;
+  const canvasHeight = isLandscape ? 794 : 1123;
+  const design = data.event?.design;
+  
+  const signersList = data.event?.signers || (data.event?.signerName ? [{ name: data.event.signerName, title: data.event.signerTitle }] : []);
+
+  // Variabel perataan teks dinamis
+  const alignName = design?.positions?.name?.align || 'center';
+  const alignCertId = design?.positions?.certId?.align || 'center';
+
+  return (
+    <div className="min-h-screen bg-slate-50 py-12 px-4 flex flex-col items-center">
+      <div className="max-w-4xl w-full bg-white rounded-md shadow-xl border border-slate-100 overflow-hidden">
+        
+        <div className="bg-emerald-600 p-8 text-center text-white relative overflow-hidden">
+           <div className="absolute inset-0 bg-white/20 w-16 skew-x-[45deg] animate-[slide_3s_infinite]"></div>
+           <div className="w-16 h-16 bg-white text-emerald-600 rounded-md flex items-center justify-center mx-auto mb-4 text-3xl shadow-lg">✓</div>
+           <h1 className="text-2xl font-black uppercase tracking-widest mb-1">Sertifikat Valid</h1>
+           <p className="text-xs text-emerald-100 opacity-90 tracking-wider">Diperiksa: {liveTime}</p>
+        </div>
+        
+        <div className="p-6 md:p-10">
+          
+          <div className="mb-10">
+             <h3 className="text-lg font-black text-slate-900 mb-4 border-b border-slate-200 pb-2">Informasi Dokumen</h3>
+             <div className="border border-slate-200 rounded-md overflow-hidden">
+                <table className="w-full text-left text-sm">
+                   <tbody>
+                      <tr className="border-b border-slate-100 bg-slate-50">
+                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Nama Peserta</th>
+                         <td className="py-3 px-4 font-black text-slate-900">{data.name}</td>
+                      </tr>
+                      <tr className="border-b border-slate-100">
+                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Nomor Sertifikat</th>
+                         <td className="py-3 px-4 font-bold text-emerald-700 font-mono">{certId}</td>
+                      </tr>
+                      <tr className="border-b border-slate-100 bg-slate-50">
+                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Nama Kegiatan</th>
+                         <td className="py-3 px-4 font-medium text-slate-800">{data.event?.name}</td>
+                      </tr>
+                      <tr className="border-b border-slate-100">
+                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Tanggal Pelaksanaan</th>
+                         <td className="py-3 px-4 font-medium text-slate-800">{data.event?.date}</td>
+                      </tr>
+                      <tr>
+                         <th className="py-3 px-4 font-bold text-slate-600 w-1/3">Tempat Pelaksanaan</th>
+                         <td className="py-3 px-4 font-medium text-slate-800">{data.event?.location}</td>
+                      </tr>
+                   </tbody>
+                </table>
+             </div>
+          </div>
+
+          <div className="mb-10">
+            {signersList.map((signer, idx) => (
+                <div key={idx} className="mb-4 bg-blue-50 border border-blue-100 rounded-md p-6 flex flex-col md:flex-row items-center gap-6">
+                    <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl shrink-0 shadow-md">
+                       ✒️
+                    </div>
+                    <div className="text-center md:text-left">
+                        <h4 className="text-sm font-bold text-blue-900 uppercase tracking-widest mb-1">Tanda Tangan Elektronik {signersList.length > 1 ? idx + 1 : ''}</h4>
+                        <p className="text-xs text-blue-700 mb-2">Dokumen ini telah disahkan secara digital (terenkripsi) oleh:</p>
+                        <p className="text-lg font-black text-slate-900">{signer.name || "Nama Tidak Tersedia"}</p>
+                        <p className="text-sm font-bold text-slate-600">{signer.title || "Jabatan Tidak Tersedia"}</p>
+                    </div>
+                </div>
+            ))}
+          </div>
+
+          {design && design.bgUrl ? (
+             <div className="mb-8 border border-slate-200 rounded-md overflow-hidden bg-white">
+               <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-widest text-center">
+                 Preview Dokumen Asli
+               </div>
+               
+               <div className="p-4 md:p-8 flex justify-center items-center bg-slate-100/50 w-full overflow-hidden">
+                 <div ref={containerRef} className="w-full flex justify-center">
+                   <div 
+                     className="relative transition-all duration-300"
+                     style={{ width: `${canvasWidth * scale}px`, height: `${canvasHeight * scale}px` }}
+                   >
+                     <div 
+                       className="absolute top-0 left-0 bg-white shadow-lg border border-slate-200 overflow-hidden origin-top-left"
+                       style={{ 
+                         width: `${canvasWidth}px`, height: `${canvasHeight}px`, 
+                         backgroundImage: `url(${design.bgUrl})`, backgroundSize: '100% 100%',
+                         transform: `scale(${scale})` 
+                       }}
+                     >
+                        <div style={{ position: 'absolute', left: `${design.positions.name.x}px`, top: `${design.positions.name.y}px`, width: `${design.positions.name.w}px`, height: `${design.positions.name.h}px`, display: 'flex', alignItems: 'center', justifyContent: alignName }}>
+                            <h2 style={{ fontSize: `${design.positions.name.h * 0.8}px`, margin: 0, padding: '0 8px', fontWeight: 'bold', color: '#0f172a', whiteSpace: 'nowrap' }}>{data.name}</h2>
+                        </div>
+                        <div style={{ position: 'absolute', left: `${design.positions.certId.x}px`, top: `${design.positions.certId.y}px`, width: `${design.positions.certId.w}px`, height: `${design.positions.certId.h}px`, display: 'flex', alignItems: 'center', justifyContent: alignCertId }}>
+                            <p style={{ fontSize: `${design.positions.certId.h * 0.8}px`, margin: 0, padding: '0 8px', fontWeight: 'bold', color: '#1e293b', whiteSpace: 'nowrap' }}>{certId}</p>
+                        </div>
+                        <div style={{ position: 'absolute', left: `${design.positions.qr.x}px`, top: `${design.positions.qr.y}px`, width: `${design.positions.qr.w}px`, height: `${design.positions.qr.h}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                            <QRCodeSVG 
+                                value={`${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`} 
+                                size={design.positions.qr.w}
+                                fgColor="#0f172a"
+                                imageSettings={{
+                                    src: "https://i.ibb.co.com/21s67v2h/maseid.png",
+                                    height: (design.positions.qr.w) * 0.25,
+                                    width: (design.positions.qr.w) * 0.25,
+                                    excavate: true,
+                                }}
+                            />
+                        </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+          ) : (
+             <div className="mb-8 p-6 text-center border-2 border-dashed border-slate-200 rounded-md text-slate-400 text-sm">
+                Desain sertifikat belum tersedia.
+             </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+             <Link href="/" className="inline-block bg-slate-100 text-slate-700 px-8 py-3.5 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition text-center">
+                Cek Dokumen Lainnya
+             </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

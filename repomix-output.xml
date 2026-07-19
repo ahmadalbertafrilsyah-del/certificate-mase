@@ -467,76 +467,6 @@ export default function AdminDashboard() {
 }
 </file>
 
-<file path="app/api/send-certificate/route.js">
-import nodemailer from 'nodemailer';
-import { NextResponse } from 'next/server';
-
-// Hindari timeout saat mengirim file besar
-export const maxDuration = 60;
-
-export async function POST(request) {
-  try {
-    const { email, name, certId, pdfBase64, eventName } = await request.json();
-
-    if (!email) {
-      return NextResponse.json({ success: false, error: 'Email tidak ditemukan' }, { status: 400 });
-    }
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    // Validasi pembentukan buffer dari Base64
-    const cleanBase64 = pdfBase64.includes("base64,") ? pdfBase64.split("base64,")[1] : pdfBase64;
-    const pdfBuffer = Buffer.from(cleanBase64, "base64");
-
-    const mailOptions = {
-      from: `"Mahatma Academy" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: `E-Certificate: ${eventName} - ${name}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
-          <div style="background-color: #059669; padding: 20px; text-align: center;">
-             <h2 style="color: white; margin: 0;">Sertifikat Elektronik</h2>
-          </div>
-          <div style="padding: 20px;">
-             <p>Halo <strong>${name}</strong>,</p>
-             <p>Terima kasih telah berpartisipasi dalam kegiatan <strong>${eventName}</strong>.</p>
-             <p>Bersama email ini, kami melampirkan E-Certificate Anda dengan Nomor Registrasi: <strong>${certId}</strong>.</p>
-             <p>Keaslian sertifikat ini dapat diverifikasi secara digital melalui portal resmi kami:</p>
-             <div style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.NEXT_PUBLIC_BASE_URL}/verify/${certId}" style="background-color: #0f172a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Verifikasi Sertifikat</a>
-             </div>
-             <p style="font-size: 12px; color: #64748b;">Jika tombol di atas tidak berfungsi, salin link berikut: <br/>${process.env.NEXT_PUBLIC_BASE_URL}/verify/${certId}</p>
-          </div>
-          <div style="background-color: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #94a3b8;">
-             &copy; ${new Date().getFullYear()} Mahatma Academy.
-          </div>
-        </div>
-      `,
-      attachments: [
-        {
-          filename: `Sertifikat_${name.replace(/\s+/g, '_')}.pdf`,
-          content: pdfBuffer,
-          contentType: 'application/pdf'
-        }
-      ]
-    };
-
-    await transporter.sendMail(mailOptions);
-    
-    return NextResponse.json({ success: true, message: 'Email berhasil terkirim' });
-  } catch (error) {
-    console.error("Gagal mengirim email:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
-</file>
-
 <file path="app/layout.js">
 import { Merriweather } from 'next/font/google';
 import './globals.css';
@@ -638,6 +568,64 @@ export default function AdminLogin() {
       </div>
     </div>
   );
+}
+</file>
+
+<file path="app/api/send-certificate/route.js">
+import nodemailer from 'nodemailer';
+import { NextResponse } from 'next/server';
+
+export async function POST(request) {
+  try {
+    const { email, name, certId, eventName } = await request.json();
+
+    if (!email) {
+      return NextResponse.json({ success: false, error: 'Email tidak ditemukan' }, { status: 400 });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const verifyLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`;
+
+    const mailOptions = {
+      from: `"Mahatma Academy" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: `E-Certificate: ${eventName} - ${name}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
+          <div style="background-color: #059669; padding: 20px; text-align: center;">
+             <h2 style="color: white; margin: 0;">Sertifikat Elektronik Diterbitkan</h2>
+          </div>
+          <div style="padding: 20px;">
+             <p>Halo <strong>${name}</strong>,</p>
+             <p>Terima kasih telah berpartisipasi dalam kegiatan <strong>${eventName}</strong>.</p>
+             <p>Sertifikat elektronik Anda telah terbit dengan Nomor Registrasi Resmi: <strong>${certId}</strong>.</p>
+             <p>Anda dapat melihat, memverifikasi keaslian, dan mengunduh (Download PDF) sertifikat Anda melalui portal resmi kami:</p>
+             <div style="text-align: center; margin: 35px 0;">
+                <a href="${verifyLink}" style="background-color: #0f172a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold;">Lihat & Unduh Sertifikat</a>
+             </div>
+             <p style="font-size: 12px; color: #64748b;">Jika tombol di atas tidak berfungsi, salin link berikut ke browser Anda: <br/>${verifyLink}</p>
+          </div>
+          <div style="background-color: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #94a3b8;">
+             &copy; ${new Date().getFullYear()} Mahatma Academy.
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    
+    return NextResponse.json({ success: true, message: 'Email notifikasi berhasil terkirim' });
+  } catch (error) {
+    console.error("Gagal mengirim email:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
 }
 </file>
 
@@ -1149,7 +1137,6 @@ export default function AdminCertificates() {
   const [participants, setParticipants] = useState([]); 
   const [loading, setLoading] = useState(false);
   
-  // State untuk melacak proses kirim email satu per satu secara real-time
   const [isDownloading, setIsDownloading] = useState(false);
   const [processingEventId, setProcessingEventId] = useState(null);
   const [progressText, setProgressText] = useState('');
@@ -1168,6 +1155,10 @@ export default function AdminCertificates() {
   const [isManagingLoading, setIsManagingLoading] = useState(false);
   const [editingPartId, setEditingPartId] = useState(null);
   const [partEditForm, setPartEditForm] = useState({ name: '', certId: '', email: '' });
+  
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [isAddingParticipant, setIsAddingParticipant] = useState(false);
+  const [newParticipantForm, setNewParticipantForm] = useState({ name: '', certId: '', email: '' });
 
   const fetchData = async () => {
     setLoading(true);
@@ -1276,11 +1267,16 @@ export default function AdminCertificates() {
 
   const openManageParticipants = async (ev) => {
       setManageEvent(ev);
+      setSelectedParticipants([]);
+      setIsAddingParticipant(false);
+      setNewParticipantForm({ name: '', certId: '', email: '' });
       setIsManagingLoading(true);
       try {
           const q = query(collection(db, "participants"), where("eventId", "==", ev.id));
           const snap = await getDocs(q);
-          setEventParticipants(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          const parts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setEventParticipants(parts);
+          setSelectedParticipants(parts.map(p => p.id));
       } catch (err) {
           console.error(err);
           alert("Gagal memuat daftar peserta.");
@@ -1288,12 +1284,43 @@ export default function AdminCertificates() {
       setIsManagingLoading(false);
   };
 
+  const handleAddParticipantDb = async () => {
+      if (!newParticipantForm.name || !newParticipantForm.certId) {
+          return alert("Nama dan Nomor Sertifikat wajib diisi!");
+      }
+      try {
+          const newRef = await addDoc(collection(db, "participants"), {
+              eventId: manageEvent.id,
+              name: newParticipantForm.name,
+              certId: newParticipantForm.certId,
+              email: newParticipantForm.email || '',
+              status: 'verified'
+          });
+          
+          const newParticipant = { id: newRef.id, eventId: manageEvent.id, ...newParticipantForm, status: 'verified' };
+          
+          setEventParticipants(prev => [...prev, newParticipant]);
+          setSelectedParticipants(prev => [...prev, newRef.id]);
+          
+          setIsAddingParticipant(false);
+          setNewParticipantForm({ name: '', certId: '', email: '' });
+          
+          await updateDoc(doc(db, "events", manageEvent.id), {
+              participantCount: eventParticipants.length + 1
+          });
+          fetchData(); 
+          
+      } catch (err) {
+          console.error(err);
+          alert("Gagal menambahkan peserta.");
+      }
+  };
+
   const saveParticipantEdit = async (id) => {
       try {
           await updateDoc(doc(db, "participants", id), partEditForm);
           setEventParticipants(prev => prev.map(p => p.id === id ? { ...p, ...partEditForm } : p));
           setEditingPartId(null);
-          alert("Data peserta berhasil diperbarui!");
       } catch (err) {
           console.error(err);
           alert("Gagal memperbarui data peserta.");
@@ -1305,6 +1332,12 @@ export default function AdminCertificates() {
           try {
               await deleteDoc(doc(db, "participants", id));
               setEventParticipants(prev => prev.filter(p => p.id !== id));
+              setSelectedParticipants(prev => prev.filter(pId => pId !== id));
+              
+              await updateDoc(doc(db, "events", manageEvent.id), {
+                  participantCount: eventParticipants.length - 1
+              });
+              fetchData();
           } catch (err) {
               console.error(err);
               alert("Gagal menghapus peserta.");
@@ -1312,25 +1345,36 @@ export default function AdminCertificates() {
       }
   };
 
-  const handleBatchGenerateAndSend = async (eventData) => {
-    if (!eventData.design || !eventData.design.bgUrl) {
+  const handleSelectAll = (e) => {
+      if(e.target.checked) {
+          setSelectedParticipants(eventParticipants.map(p => p.id));
+      } else {
+          setSelectedParticipants([]);
+      }
+  };
+
+  const handleSelectRow = (id) => {
+      if(selectedParticipants.includes(id)) {
+          setSelectedParticipants(prev => prev.filter(item => item !== id));
+      } else {
+          setSelectedParticipants(prev => [...prev, id]);
+      }
+  };
+
+  const handleBatchGenerateAndSend = async () => {
+    if (!manageEvent.design || !manageEvent.design.bgUrl) {
         return alert("Desain sertifikat belum diatur! Klik 'Kanvas Desain' terlebih dahulu.");
+    }
+
+    if(selectedParticipants.length === 0) {
+        return alert("Pilih minimal satu peserta untuk di-generate/diemail.");
     }
     
     setIsDownloading(true);
-    setProcessingEventId(eventData.id);
+    setProcessingEventId(manageEvent.id);
 
     try {
-        const q = query(collection(db, "participants"), where("eventId", "==", eventData.id));
-        const partSnap = await getDocs(q);
-        const eventParticipants = partSnap.docs.map(d => d.data());
-
-        if (eventParticipants.length === 0) {
-            alert("Tidak ada data peserta ditemukan untuk acara ini.");
-            setIsDownloading(false);
-            setProcessingEventId(null);
-            return;
-        }
+        const partsToProcess = eventParticipants.filter(p => selectedParticipants.includes(p.id));
 
         const hiddenContainer = document.createElement('div');
         hiddenContainer.style.position = 'absolute';
@@ -1341,10 +1385,10 @@ export default function AdminCertificates() {
         let successCount = 0;
         let failCount = 0;
 
-        for (let i = 0; i < eventParticipants.length; i++) {
-          setProgressText(`Memproses ${i + 1} dari ${eventParticipants.length}...`);
-          const p = eventParticipants[i];
-          const config = eventData.design;
+        for (let i = 0; i < partsToProcess.length; i++) {
+          setProgressText(`Memproses ${i + 1} dari ${partsToProcess.length}...`);
+          const p = partsToProcess[i];
+          const config = manageEvent.design;
           const isLandscape = config.orientation !== 'portrait';
           const canvasWidth = isLandscape ? 1123 : 794;
           const canvasHeight = isLandscape ? 794 : 1123;
@@ -1390,7 +1434,7 @@ export default function AdminCertificates() {
           await new Promise(resolve => setTimeout(resolve, 50));
 
           const elementToRender = document.getElementById(`cert-render-${i}`);
-          const dataUrl = await toJpeg(elementToRender, { quality: 0.8, pixelRatio: 1.0 });
+          const dataUrl = await toJpeg(elementToRender, { quality: 0.5, pixelRatio: 1.0 }); 
           
           const pdfFormat = isLandscape ? 'landscape' : 'portrait';
           const pdfWidth = isLandscape ? 297 : 210;
@@ -1400,8 +1444,6 @@ export default function AdminCertificates() {
           pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
 
           if (p.email) {
-              const pdfBase64 = pdf.output('datauristring');
-              
               try {
                   const response = await fetch('/api/send-certificate', {
                       method: 'POST',
@@ -1410,8 +1452,7 @@ export default function AdminCertificates() {
                           email: p.email,
                           name: p.name,
                           certId: p.certId,
-                          pdfBase64: pdfBase64,
-                          eventName: eventData.name
+                          eventName: manageEvent.name
                       })
                   });
 
@@ -1425,7 +1466,7 @@ export default function AdminCertificates() {
                   pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
                   failCount++;
               }
-              await new Promise(resolve => setTimeout(resolve, 2000));
+              await new Promise(resolve => setTimeout(resolve, 1000)); 
           } else {
               pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
               failCount++; 
@@ -1438,7 +1479,7 @@ export default function AdminCertificates() {
         
     } catch (error) {
         console.error(error);
-        alert("Terjadi kesalahan saat memproses sertifikat. Pastikan koneksi internet Anda stabil.");
+        alert("Terjadi kesalahan sistem saat memproses PDF.");
     }
     setIsDownloading(false);
     setProcessingEventId(null);
@@ -1472,7 +1513,7 @@ export default function AdminCertificates() {
                             <tr className="bg-slate-100 text-[10px] uppercase tracking-widest text-slate-500 border-b border-slate-200">
                                 <th className="p-5">Nama & Detail Acara</th>
                                 <th className="p-5 text-center">Peserta</th>
-                                <th className="p-5 text-center">Aksi Desain & PDF</th>
+                                <th className="p-5 text-right">Aksi Desain & PDF</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1489,18 +1530,11 @@ export default function AdminCertificates() {
                                             title="Kelola Peserta"
                                             className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-md text-xs font-bold hover:bg-emerald-600 hover:text-white transition"
                                         >
-                                            👥 Peserta
+                                            👥 Peserta & Generate
                                         </button>
                                         <Link href={`/admin/certificates/design?eventId=${ev.id}`} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-200 transition">
                                             Kanvas Desain
                                         </Link>
-                                        <button 
-                                            onClick={() => handleBatchGenerateAndSend(ev)} 
-                                            disabled={isDownloading}
-                                            className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50 min-w-[150px]"
-                                        >
-                                            {isDownloading && processingEventId === ev.id ? progressText : 'Generate & Email'}
-                                        </button>
                                         <button 
                                             onClick={() => handleDeleteEvent(ev.id)} 
                                             disabled={loading}
@@ -1628,11 +1662,39 @@ export default function AdminCertificates() {
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                         <div>
-                            <h3 className="font-black text-lg text-slate-900">Kelola Peserta</h3>
+                            <h3 className="font-black text-lg text-slate-900">Kelola Peserta & Kirim Sertifikat</h3>
                             <p className="text-xs text-slate-500 mt-1">Acara: {manageEvent.name}</p>
                         </div>
                         <button onClick={() => setManageEvent(null)} className="text-slate-400 hover:text-red-500 font-bold text-xl">&times;</button>
                     </div>
+                    
+                    <div className="px-6 py-4 bg-white border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="text-sm font-bold text-slate-600 flex items-center gap-2">
+                           <input type="checkbox" id="selectAll" className="w-4 h-4 cursor-pointer" 
+                               checked={selectedParticipants.length === eventParticipants.length && eventParticipants.length > 0} 
+                               onChange={handleSelectAll} 
+                           />
+                           <label htmlFor="selectAll" className="cursor-pointer">Pilih Semua ({selectedParticipants.length} Terpilih)</label>
+                        </div>
+                        
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <button 
+                                onClick={() => setIsAddingParticipant(true)} 
+                                disabled={isDownloading || isAddingParticipant}
+                                className="w-full sm:w-auto px-4 py-3 bg-emerald-50 text-emerald-700 rounded-md text-xs font-bold hover:bg-emerald-600 hover:text-white transition disabled:opacity-50"
+                            >
+                                ➕ Tambah Manual
+                            </button>
+                            <button 
+                                onClick={handleBatchGenerateAndSend} 
+                                disabled={isDownloading || selectedParticipants.length === 0}
+                                className="w-full sm:w-auto px-6 py-3 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50 min-w-[150px]"
+                            >
+                                {isDownloading && processingEventId === manageEvent.id ? progressText : `🚀 Generate & Email`}
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
                         {isManagingLoading ? (
                             <p className="text-center text-slate-500 text-sm font-bold py-10">Memuat data peserta...</p>
@@ -1641,6 +1703,7 @@ export default function AdminCertificates() {
                                 <table className="w-full text-left text-xs border-collapse">
                                     <thead className="bg-slate-100 sticky top-0">
                                         <tr>
+                                            <th className="p-3 border-b border-slate-200 w-10 text-center">#</th>
                                             <th className="p-3 border-b border-slate-200">Nama Lengkap</th>
                                             <th className="p-3 border-b border-slate-200">No. Sertifikat</th>
                                             <th className="p-3 border-b border-slate-200">Email</th>
@@ -1648,19 +1711,36 @@ export default function AdminCertificates() {
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        {isAddingParticipant && (
+                                            <tr className="border-b border-emerald-100 bg-emerald-50/50">
+                                                <td className="p-2 text-center text-emerald-600 font-bold">+</td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" placeholder="Nama..." value={newParticipantForm.name} onChange={e => setNewParticipantForm({...newParticipantForm, name: e.target.value})} /></td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" placeholder="MASE-..." value={newParticipantForm.certId} onChange={e => setNewParticipantForm({...newParticipantForm, certId: e.target.value})} /></td>
+                                                <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" placeholder="Email..." value={newParticipantForm.email} onChange={e => setNewParticipantForm({...newParticipantForm, email: e.target.value})} /></td>
+                                                <td className="p-2 text-right whitespace-nowrap">
+                                                    <button onClick={handleAddParticipantDb} className="text-white bg-emerald-600 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-emerald-500 mr-2 transition">Simpan</button>
+                                                    <button onClick={() => { setIsAddingParticipant(false); setNewParticipantForm({ name: '', certId: '', email: '' }); }} className="text-slate-500 bg-slate-200 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-slate-300 transition">Batal</button>
+                                                </td>
+                                            </tr>
+                                        )}
+
                                         {eventParticipants.map(p => (
                                             editingPartId === p.id ? (
-                                                <tr key={p.id} className="border-b border-slate-50 bg-emerald-50/50">
+                                                <tr key={p.id} className="border-b border-slate-50 bg-blue-50/50">
+                                                    <td className="p-2 text-center">-</td>
                                                     <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={partEditForm.name} onChange={e => setPartEditForm({...partEditForm, name: e.target.value})} /></td>
                                                     <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={partEditForm.certId} onChange={e => setPartEditForm({...partEditForm, certId: e.target.value})} /></td>
                                                     <td className="p-2"><input className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-emerald-500 bg-white" value={partEditForm.email} onChange={e => setPartEditForm({...partEditForm, email: e.target.value})} /></td>
                                                     <td className="p-2 text-right whitespace-nowrap">
-                                                        <button onClick={() => saveParticipantEdit(p.id)} className="text-white bg-emerald-600 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-emerald-500 mr-2 transition">Simpan</button>
+                                                        <button onClick={() => saveParticipantEdit(p.id)} className="text-white bg-blue-600 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-blue-500 mr-2 transition">Update</button>
                                                         <button onClick={() => setEditingPartId(null)} className="text-slate-500 bg-slate-200 px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-slate-300 transition">Batal</button>
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50">
+                                                    <td className="p-3 text-center">
+                                                        <input type="checkbox" className="w-4 h-4 cursor-pointer" checked={selectedParticipants.includes(p.id)} onChange={() => handleSelectRow(p.id)} />
+                                                    </td>
                                                     <td className="p-3 font-bold text-slate-800">{p.name}</td>
                                                     <td className="p-3 font-mono text-emerald-600">{p.certId}</td>
                                                     <td className="p-3 text-slate-500">{p.email || '-'}</td>
@@ -1671,8 +1751,8 @@ export default function AdminCertificates() {
                                                 </tr>
                                             )
                                         ))}
-                                        {eventParticipants.length === 0 && (
-                                            <tr><td colSpan="4" className="text-center py-10 text-slate-400 font-medium">Tidak ada data peserta.</td></tr>
+                                        {eventParticipants.length === 0 && !isAddingParticipant && (
+                                            <tr><td colSpan="5" className="text-center py-10 text-slate-400 font-medium">Tidak ada data peserta.</td></tr>
                                         )}
                                     </tbody>
                                 </table>
@@ -1693,7 +1773,10 @@ import { useEffect, useState, useRef, use } from 'react';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
+import jsPDF from 'jspdf';
+import { toJpeg } from 'html-to-image'; 
 import { QRCodeSVG } from 'qrcode.react';
+import { renderToString } from 'react-dom/server';
 
 export default function VerifyPage({ params }) {
   const resolvedParams = use(params);
@@ -1702,6 +1785,7 @@ export default function VerifyPage({ params }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [liveTime, setLiveTime] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
   
   const containerRef = useRef(null);
   const [scale, setScale] = useState(1);
@@ -1758,6 +1842,76 @@ export default function VerifyPage({ params }) {
     }
   }, [data]);
 
+  const handleDownloadPDF = async () => {
+    if (!data.event?.design) return alert("Desain sertifikat belum tersedia.");
+    setIsDownloading(true);
+
+    const config = data.event.design;
+    const isLandscape = config.orientation !== 'portrait';
+    const canvasWidth = isLandscape ? 1123 : 794;
+    const canvasHeight = isLandscape ? 794 : 1123;
+    const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`;
+
+    const hiddenContainer = document.createElement('div');
+    hiddenContainer.style.position = 'absolute';
+    hiddenContainer.style.top = '-9999px';
+    hiddenContainer.style.left = '-9999px';
+    document.body.appendChild(hiddenContainer);
+    
+    const alignName = config.positions?.name?.align || 'center';
+    const alignCertId = config.positions?.certId?.align || 'center';
+    const qrSize = config.positions?.qr?.w || 120;
+
+    const qrSvg = renderToString(
+        <QRCodeSVG
+            value={qrLink}
+            size={qrSize}
+            fgColor="#0f172a"
+            imageSettings={{
+                src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
+                height: qrSize * 0.25,
+                width: qrSize * 0.25,
+                excavate: true,
+            }}
+        />
+     );
+
+    hiddenContainer.innerHTML = `
+      <div id="cert-render-pdf" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: cover; background-repeat: no-repeat; position: relative;">
+        <div style="position: absolute; left: ${config.positions.name.x}px; top: ${config.positions.name.y}px; width: ${config.positions.name.w}px; height: ${config.positions.name.h}px; display: flex; align-items: center; justify-content: ${alignName};">
+          <h2 style="font-size: ${(config.positions.name.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #0f172a; white-space: nowrap;">${data.name}</h2>
+        </div>
+        <div style="position: absolute; left: ${config.positions.certId.x}px; top: ${config.positions.certId.y}px; width: ${config.positions.certId.w}px; height: ${config.positions.certId.h}px; display: flex; align-items: center; justify-content: ${alignCertId};">
+          <p style="font-size: ${(config.positions.certId.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${certId}</p>
+        </div>
+        <div style="position: absolute; left: ${config.positions.qr.x}px; top: ${config.positions.qr.y}px; width: ${config.positions.qr.w}px; height: ${config.positions.qr.h}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+           ${qrSvg}
+        </div>
+      </div>
+    `;
+
+    try {
+      const elementToRender = document.getElementById('cert-render-pdf');
+      const dataUrl = await toJpeg(elementToRender, { quality: 1.0, pixelRatio: 2 });
+      
+      const pdfFormat = isLandscape ? 'landscape' : 'portrait';
+      const pdfWidth = isLandscape ? 297 : 210;
+      const pdfHeight = isLandscape ? 210 : 297;
+      
+      const pdf = new jsPDF({ orientation: pdfFormat, unit: 'mm', format: 'a4' });
+      pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      
+      const safeName = data.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      pdf.save(`Sertifikat_${safeName}.pdf`);
+    } catch (err) {
+      console.error("Gagal mendownload PDF", err);
+      alert("Terjadi kesalahan saat mengunduh sertifikat.");
+    } finally {
+      document.body.removeChild(hiddenContainer);
+      setIsDownloading(false);
+    }
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center">
         <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-md animate-spin mb-4"></div>
@@ -1785,7 +1939,6 @@ export default function VerifyPage({ params }) {
   
   const signersList = data.event?.signers || (data.event?.signerName ? [{ name: data.event.signerName, title: data.event.signerTitle }] : []);
 
-  // Variabel perataan teks dinamis
   const alignName = design?.positions?.name?.align || 'center';
   const alignCertId = design?.positions?.certId?.align || 'center';
 
@@ -1880,7 +2033,7 @@ export default function VerifyPage({ params }) {
                                 size={design.positions.qr.w}
                                 fgColor="#0f172a"
                                 imageSettings={{
-                                    src: "https://i.ibb.co.com/21s67v2h/maseid.png",
+                                    src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
                                     height: (design.positions.qr.w) * 0.25,
                                     width: (design.positions.qr.w) * 0.25,
                                     excavate: true,
@@ -1899,6 +2052,13 @@ export default function VerifyPage({ params }) {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+             <button 
+                onClick={handleDownloadPDF} 
+                disabled={isDownloading || !design?.bgUrl}
+                className="inline-block bg-emerald-600 text-white px-8 py-3.5 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-emerald-500 transition shadow-md disabled:bg-emerald-300"
+             >
+                {isDownloading ? 'Menyiapkan Dokumen...' : '📥 Download PDF'}
+             </button>
              <Link href="/" className="inline-block bg-slate-100 text-slate-700 px-8 py-3.5 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition text-center">
                 Cek Dokumen Lainnya
              </Link>

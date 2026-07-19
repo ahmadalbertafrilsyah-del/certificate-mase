@@ -6,6 +6,7 @@ import Link from 'next/link';
 import jsPDF from 'jspdf';
 import { toJpeg } from 'html-to-image'; 
 import { QRCodeSVG } from 'qrcode.react';
+import { renderToString } from 'react-dom/server';
 
 export default function VerifyPage({ params }) {
   const resolvedParams = use(params);
@@ -89,6 +90,21 @@ export default function VerifyPage({ params }) {
     
     const alignName = config.positions?.name?.align || 'center';
     const alignCertId = config.positions?.certId?.align || 'center';
+    const qrSize = config.positions?.qr?.w || 120;
+
+    const qrSvg = renderToString(
+        <QRCodeSVG
+            value={qrLink}
+            size={qrSize}
+            fgColor="#0f172a"
+            imageSettings={{
+                src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
+                height: qrSize * 0.25,
+                width: qrSize * 0.25,
+                excavate: true,
+            }}
+        />
+     );
 
     hiddenContainer.innerHTML = `
       <div id="cert-render-pdf" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: cover; background-repeat: no-repeat; position: relative;">
@@ -99,7 +115,7 @@ export default function VerifyPage({ params }) {
           <p style="font-size: ${(config.positions.certId.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${certId}</p>
         </div>
         <div style="position: absolute; left: ${config.positions.qr.x}px; top: ${config.positions.qr.y}px; width: ${config.positions.qr.w}px; height: ${config.positions.qr.h}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-           <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrLink)}" style="width: 100%; height: 100%; object-fit: contain;" alt="QR" />
+           ${qrSvg}
         </div>
       </div>
     `;
@@ -247,7 +263,7 @@ export default function VerifyPage({ params }) {
                                 size={design.positions.qr.w}
                                 fgColor="#0f172a"
                                 imageSettings={{
-                                    src: "https://i.ibb.co.com/21s67v2h/maseid.png",
+                                    src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
                                     height: (design.positions.qr.w) * 0.25,
                                     width: (design.positions.qr.w) * 0.25,
                                     excavate: true,

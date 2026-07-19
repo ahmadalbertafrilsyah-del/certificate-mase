@@ -29,17 +29,13 @@ export default function AdminCertificates() {
   const [editingIndex, setEditingIndex] = useState(-1);
   const [editForm, setEditForm] = useState({ name: '', certId: '', email: '' });
 
-  // Manage Participants Modal
   const [manageEvent, setManageEvent] = useState(null);
   const [eventParticipants, setEventParticipants] = useState([]);
   const [isManagingLoading, setIsManagingLoading] = useState(false);
   const [editingPartId, setEditingPartId] = useState(null);
   const [partEditForm, setPartEditForm] = useState({ name: '', certId: '', email: '' });
   
-  // Selection State for Email/Generate
   const [selectedParticipants, setSelectedParticipants] = useState([]);
-
-  // States untuk Tambah Peserta Manual di Modal
   const [isAddingParticipant, setIsAddingParticipant] = useState(false);
   const [newParticipantForm, setNewParticipantForm] = useState({ name: '', certId: '', email: '' });
 
@@ -159,7 +155,6 @@ export default function AdminCertificates() {
           const snap = await getDocs(q);
           const parts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           setEventParticipants(parts);
-          // Set checked default semua
           setSelectedParticipants(parts.map(p => p.id));
       } catch (err) {
           console.error(err);
@@ -189,11 +184,10 @@ export default function AdminCertificates() {
           setIsAddingParticipant(false);
           setNewParticipantForm({ name: '', certId: '', email: '' });
           
-          // Update jumlah peserta di data acara secara real-time
           await updateDoc(doc(db, "events", manageEvent.id), {
               participantCount: eventParticipants.length + 1
           });
-          fetchData(); // Refresh tampilan di background
+          fetchData(); 
           
       } catch (err) {
           console.error(err);
@@ -219,7 +213,6 @@ export default function AdminCertificates() {
               setEventParticipants(prev => prev.filter(p => p.id !== id));
               setSelectedParticipants(prev => prev.filter(pId => pId !== id));
               
-              // Update jumlah peserta di data acara
               await updateDoc(doc(db, "events", manageEvent.id), {
                   participantCount: eventParticipants.length - 1
               });
@@ -231,7 +224,6 @@ export default function AdminCertificates() {
       }
   };
 
-  // Checkbox logic
   const handleSelectAll = (e) => {
       if(e.target.checked) {
           setSelectedParticipants(eventParticipants.map(p => p.id));
@@ -296,7 +288,7 @@ export default function AdminCertificates() {
                  size={qrSize}
                  fgColor="#0f172a"
                  imageSettings={{
-                     src: "https://i.ibb.co.com/21s67v2h/maseid.png",
+                     src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
                      height: qrSize * 0.25,
                      width: qrSize * 0.25,
                      excavate: true,
@@ -331,8 +323,6 @@ export default function AdminCertificates() {
           pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
 
           if (p.email) {
-              const pdfBase64 = pdf.output('datauristring');
-              
               try {
                   const response = await fetch('/api/send-certificate', {
                       method: 'POST',
@@ -341,7 +331,6 @@ export default function AdminCertificates() {
                           email: p.email,
                           name: p.name,
                           certId: p.certId,
-                          pdfBase64: pdfBase64,
                           eventName: manageEvent.name
                       })
                   });
@@ -356,7 +345,7 @@ export default function AdminCertificates() {
                   pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
                   failCount++;
               }
-              await new Promise(resolve => setTimeout(resolve, 4000)); 
+              await new Promise(resolve => setTimeout(resolve, 1000)); 
           } else {
               pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
               failCount++; 
@@ -547,7 +536,6 @@ export default function AdminCertificates() {
             </form>
         )}
 
-        {/* MODAL KELOLA PESERTA DAN CHECKBOX GENERATE */}
         {manageEvent && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
@@ -559,7 +547,6 @@ export default function AdminCertificates() {
                         <button onClick={() => setManageEvent(null)} className="text-slate-400 hover:text-red-500 font-bold text-xl">&times;</button>
                     </div>
                     
-                    {/* Panel Aksi Generate Email & Tambah Peserta Manual */}
                     <div className="px-6 py-4 bg-white border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <div className="text-sm font-bold text-slate-600 flex items-center gap-2">
                            <input type="checkbox" id="selectAll" className="w-4 h-4 cursor-pointer" 
@@ -603,7 +590,6 @@ export default function AdminCertificates() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {/* Baris Tambah Peserta Baru */}
                                         {isAddingParticipant && (
                                             <tr className="border-b border-emerald-100 bg-emerald-50/50">
                                                 <td className="p-2 text-center text-emerald-600 font-bold">+</td>

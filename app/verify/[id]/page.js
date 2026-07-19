@@ -92,16 +92,17 @@ export default function VerifyPage({ params }) {
     const alignCertId = config.positions?.certId?.align || 'center';
     const qrSize = config.positions?.qr?.w || 120;
 
+    // Render QR SVG Statis untuk PDF dengan excavate: false (tanpa latar putih)
     const qrSvg = renderToString(
         <QRCodeSVG
             value={qrLink}
             size={qrSize}
             fgColor="#0f172a"
             imageSettings={{
-                src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
+                src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
                 height: qrSize * 0.25,
                 width: qrSize * 0.25,
-                excavate: true,
+                excavate: false,
             }}
         />
      );
@@ -142,17 +143,19 @@ export default function VerifyPage({ params }) {
     }
   };
 
+  // PERBAIKAN: rounded-md menjadi rounded-full untuk ikon loading
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center">
-        <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-md animate-spin mb-4"></div>
+        <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4"></div>
         <p className="text-slate-500 font-bold tracking-widest text-sm uppercase">Memvalidasi Data...</p>
     </div>
   );
 
+  // PERBAIKAN: rounded-md menjadi rounded-full untuk ikon gagal
   if (!data) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full bg-white p-8 rounded-md shadow-xl border-t-4 border-red-500 text-center">
-        <div className="w-16 h-16 bg-red-100 text-red-500 rounded-md flex items-center justify-center mx-auto mb-4 text-3xl">❌</div>
+        <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">❌</div>
         <h1 className="text-2xl font-black text-slate-900 mb-2">Dokumen Tidak Valid</h1>
         <p className="text-slate-500 text-sm mb-8 leading-relaxed">Nomor registrasi <b>{certId}</b> tidak ditemukan dalam basis data resmi Mahatma Academy. Mohon periksa kembali nomor yang Anda masukkan.</p>
         <Link href="/" className="inline-block bg-slate-900 text-white px-8 py-3 rounded-md font-bold text-sm hover:bg-slate-800 transition">
@@ -178,7 +181,8 @@ export default function VerifyPage({ params }) {
         
         <div className="bg-emerald-600 p-8 text-center text-white relative overflow-hidden">
            <div className="absolute inset-0 bg-white/20 w-16 skew-x-[45deg] animate-[slide_3s_infinite]"></div>
-           <div className="w-16 h-16 bg-white text-emerald-600 rounded-md flex items-center justify-center mx-auto mb-4 text-3xl shadow-lg">✓</div>
+           {/* PERBAIKAN: rounded-md menjadi rounded-full untuk ikon sukses */}
+           <div className="w-16 h-16 bg-white text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-lg">✓</div>
            <h1 className="text-2xl font-black uppercase tracking-widest mb-1">Sertifikat Valid</h1>
            <p className="text-xs text-emerald-100 opacity-90 tracking-wider">Diperiksa: {liveTime}</p>
         </div>
@@ -263,10 +267,10 @@ export default function VerifyPage({ params }) {
                                 size={design.positions.qr.w}
                                 fgColor="#0f172a"
                                 imageSettings={{
-                                    src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
+                                    src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
                                     height: (design.positions.qr.w) * 0.25,
                                     width: (design.positions.qr.w) * 0.25,
-                                    excavate: true,
+                                    excavate: false, /* PERBAIKAN: excavate false menghilangkan kotak putih pelindung */
                                 }}
                             />
                         </div>

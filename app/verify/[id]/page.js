@@ -99,7 +99,7 @@ export default function VerifyPage({ params }) {
             size={qrSize}
             fgColor="#0f172a"
             imageSettings={{
-                src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
+                src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
                 height: qrSize * 0.25,
                 width: qrSize * 0.25,
                 excavate: false,
@@ -267,7 +267,7 @@ export default function VerifyPage({ params }) {
                                 size={design.positions.qr.w}
                                 fgColor="#0f172a"
                                 imageSettings={{
-                                    src: "https://i.ibb.co.com/N2sxbS2k/logo.png",
+                                    src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
                                     height: (design.positions.qr.w) * 0.25,
                                     width: (design.positions.qr.w) * 0.25,
                                     excavate: false, /* PERBAIKAN: excavate false menghilangkan kotak putih pelindung */

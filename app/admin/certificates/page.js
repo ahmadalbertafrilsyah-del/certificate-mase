@@ -333,8 +333,8 @@ export default function AdminCertificates() {
           const alignName = config.positions?.name?.align || 'center';
           const alignCertId = config.positions?.certId?.align || 'center';
 
-          // Buat JS PDF Document Utama
           const pdf = new jsPDF({ orientation: pdfFormat, unit: 'mm', format: 'a4' });
+          const logoUrl = `https://i.ibb.co.com/21s67v2h/maseid.jpg?v=${new Date().getTime()}`; // Cache busting
 
           for (let i = 0; i < partsToProcess.length; i++) {
               setProgressText(`Menyiapkan PDF ${i + 1} dari ${partsToProcess.length}...`);
@@ -343,7 +343,12 @@ export default function AdminCertificates() {
               const qrSize = config.positions?.qr?.w || 120;
               
               const qrSvg = renderToString(
-                  <QRCodeSVG value={qrLink} size={qrSize} fgColor="#0f172a" imageSettings={{ src: "https://i.ibb.co.com/21s67v2h/maseid.jpg", height: qrSize * 0.25, width: qrSize * 0.25, excavate: false }} />
+                  <QRCodeSVG 
+                      value={qrLink} 
+                      size={qrSize} 
+                      fgColor="#0f172a" 
+                      imageSettings={{ src: logoUrl, height: qrSize * 0.25, width: qrSize * 0.25, excavate: false }} 
+                  />
               );
 
               hiddenContainer.innerHTML = `
@@ -360,10 +365,9 @@ export default function AdminCertificates() {
                   </div>
               `;
 
-              await new Promise(resolve => setTimeout(resolve, 100)); // Beri waktu render
+              await new Promise(resolve => setTimeout(resolve, 100));
               const elementToRender = document.getElementById(`cert-render-hd-${i}`);
               
-              // Kualitas HD untuk Cetak
               const dataUrl = await toJpeg(elementToRender, { quality: 1.0, pixelRatio: 2.5 }); 
               
               if (i > 0) pdf.addPage();
@@ -393,7 +397,6 @@ export default function AdminCertificates() {
       setProcessingEventId(manageEvent.id);
 
       try {
-          // Dynamic import jszip agar tidak membebani load awal
           const JSZip = (await import('jszip')).default;
           const zip = new JSZip();
 
@@ -403,18 +406,19 @@ export default function AdminCertificates() {
           hiddenContainer.style.top = '-9999px';
           document.body.appendChild(hiddenContainer);
 
+          const logoUrl = `https://i.ibb.co.com/21s67v2h/maseid.jpg?v=${new Date().getTime()}`; // Cache busting
+
           for (let i = 0; i < partsToProcess.length; i++) {
               setProgressText(`Memproses QR ${i + 1} dari ${partsToProcess.length}...`);
               const p = partsToProcess[i];
               const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}`;
               
-              // Resolusi besar (500x500) khusus untuk aset QR Code cetak terpisah
               const qrSvg = renderToString(
                   <QRCodeSVG 
                       value={qrLink} 
                       size={500} 
                       fgColor="#0f172a" 
-                      imageSettings={{ src: "https://i.ibb.co.com/21s67v2h/maseid.jpg", height: 125, width: 125, excavate: false }} 
+                      imageSettings={{ src: logoUrl, height: 125, width: 125, excavate: false }} 
                   />
               );
 
@@ -428,18 +432,15 @@ export default function AdminCertificates() {
               const elementToRender = document.getElementById(`qr-render-jpg-${i}`);
               const dataUrl = await toJpeg(elementToRender, { quality: 1.0, pixelRatio: 2.0 });
               
-              // Pisahkan format base64
               const base64Data = dataUrl.replace(/^data:image\/jpeg;base64,/, "");
               const safeName = p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
               
-              // Tambahkan ke dalam zip
               zip.file(`QRCode_${safeName}_${p.certId}.jpg`, base64Data, {base64: true});
           }
 
           document.body.removeChild(hiddenContainer);
           setProgressText('Membuat file ZIP...');
 
-          // Generate ZIP blob dan download
           const content = await zip.generateAsync({type:"blob"});
           const url = window.URL.createObjectURL(content);
           const link = document.createElement('a');
@@ -475,9 +476,71 @@ export default function AdminCertificates() {
         let successCount = 0;
         let failCount = 0;
 
+        const hiddenContainer = document.createElement('div');
+        hiddenContainer.style.position = 'absolute';
+        hiddenContainer.style.top = '-9999px';
+        hiddenContainer.style.left = '-9999px';
+        document.body.appendChild(hiddenContainer);
+
+        const config = manageEvent.design;
+        const isLandscape = config.orientation !== 'portrait';
+        const canvasWidth = isLandscape ? 1123 : 794;
+        const canvasHeight = isLandscape ? 794 : 1123;
+        const logoUrl = `https://i.ibb.co.com/21s67v2h/maseid.jpg?v=${new Date().getTime()}`;
+
         for (let i = 0; i < partsToProcess.length; i++) {
-          setProgressText(`Mengirim Email ${i + 1} dari ${partsToProcess.length}...`);
+          setProgressText(`Memproses ${i + 1} dari ${partsToProcess.length}...`);
           const p = partsToProcess[i];
+          
+          const namePos = config.positions.name;
+          const certIdPos = config.positions.certId;
+          const qrPos = config.positions.qr;
+
+          const alignName = namePos.align || 'center';
+          const alignCertId = certIdPos.align || 'center';
+
+          const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}`;
+          const qrSize = qrPos.w || 120;
+          
+          const qrSvg = renderToString(
+             <QRCodeSVG
+                 value={qrLink}
+                 size={qrSize}
+                 fgColor="#0f172a"
+                 imageSettings={{
+                     src: logoUrl,
+                     height: qrSize * 0.25,
+                     width: qrSize * 0.25,
+                     excavate: false,
+                 }}
+             />
+          );
+
+          hiddenContainer.innerHTML = `
+            <div id="cert-render-${i}" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: 100% 100%; background-repeat: no-repeat; position: relative;">
+              <div style="position: absolute; left: ${namePos.x}px; top: ${namePos.y}px; width: ${namePos.w || 400}px; height: ${namePos.h || 60}px; display: flex; align-items: center; justify-content: ${alignName};">
+                <h2 style="font-size: ${(namePos.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #0f172a; white-space: nowrap;">${p.name}</h2>
+              </div>
+              <div style="position: absolute; left: ${certIdPos.x}px; top: ${certIdPos.y}px; width: ${certIdPos.w || 200}px; height: ${certIdPos.h || 30}px; display: flex; align-items: center; justify-content: ${alignCertId};">
+                <p style="font-size: ${(certIdPos.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${p.certId}</p>
+              </div>
+              <div style="position: absolute; left: ${qrPos.x}px; top: ${qrPos.y}px; width: ${qrPos.w || 120}px; height: ${qrPos.h || 120}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                 ${qrSvg}
+              </div>
+            </div>
+          `;
+
+          await new Promise(resolve => setTimeout(resolve, 50));
+
+          const elementToRender = document.getElementById(`cert-render-${i}`);
+          const dataUrl = await toJpeg(elementToRender, { quality: 0.5, pixelRatio: 1.0 }); 
+          
+          const pdfFormat = isLandscape ? 'landscape' : 'portrait';
+          const pdfWidth = isLandscape ? 297 : 210;
+          const pdfHeight = isLandscape ? 210 : 297;
+          
+          const pdf = new jsPDF({ orientation: pdfFormat, unit: 'mm', format: 'a4' });
+          pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
 
           if (p.email) {
               try {
@@ -492,23 +555,30 @@ export default function AdminCertificates() {
                       })
                   });
 
-                  if (response.ok) successCount++;
-                  else failCount++;
+                  if (response.ok) {
+                      successCount++;
+                  } else {
+                      pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+                      failCount++;
+                  }
               } catch (e) {
+                  pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
                   failCount++;
               }
               await new Promise(resolve => setTimeout(resolve, 2000)); 
           } else {
+              pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
               failCount++; 
           }
         }
 
+        document.body.removeChild(hiddenContainer);
         setProgressText('');
-        alert(`Proses Selesai!\nBerhasil dikirim: ${successCount}\nGagal/Tidak ada Email: ${failCount}`);
+        alert(`Proses Selesai!\nBerhasil dikirim ke Email: ${successCount}\nDiunduh Manual (Gagal/Tidak ada Email): ${failCount}`);
         
     } catch (error) {
         console.error(error);
-        alert("Terjadi kesalahan sistem saat mengirim email.");
+        alert("Terjadi kesalahan sistem saat memproses PDF/Email.");
     }
     setIsDownloading(false);
     setProcessingEventId(null);

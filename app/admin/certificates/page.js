@@ -29,15 +29,21 @@ export default function AdminCertificates() {
   const [editingIndex, setEditingIndex] = useState(-1);
   const [editForm, setEditForm] = useState({ name: '', certId: '', email: '' });
 
+  // Manage Participants Modal
   const [manageEvent, setManageEvent] = useState(null);
   const [eventParticipants, setEventParticipants] = useState([]);
   const [isManagingLoading, setIsManagingLoading] = useState(false);
   const [editingPartId, setEditingPartId] = useState(null);
   const [partEditForm, setPartEditForm] = useState({ name: '', certId: '', email: '' });
   
+  // Selection State for Email/Generate
   const [selectedParticipants, setSelectedParticipants] = useState([]);
+
+  // States untuk Tambah Peserta Manual di Modal
   const [isAddingParticipant, setIsAddingParticipant] = useState(false);
   const [newParticipantForm, setNewParticipantForm] = useState({ name: '', certId: '', email: '' });
+  
+  const [isImportingModal, setIsImportingModal] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -155,6 +161,7 @@ export default function AdminCertificates() {
           const snap = await getDocs(q);
           const parts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           setEventParticipants(parts);
+          // Set checked default semua
           setSelectedParticipants(parts.map(p => p.id));
       } catch (err) {
           console.error(err);
@@ -195,11 +202,82 @@ export default function AdminCertificates() {
       }
   };
 
+  // FUNGSI BARU: Import Excel Langsung di Dalam Modal Kelola Peserta
+  const handleImportExcelModal = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      setIsImportingModal(true);
+      const reader = new FileReader();
+      
+      reader.onload = async (evt) => {
+          try {
+              const bstr = evt.target.result;
+              const wb = XLSX.read(bstr, { type: 'binary' });
+              const ws = wb.Sheets[wb.SheetNames[0]];
+              const data = XLSX.utils.sheet_to_json(ws);
+              
+              const formattedData = data.map(row => ({
+                  name: row.Nama || row.name || '',
+                  certId: row.NomorSertifikat || row.nomor || '',
+                  email: row.Email || row.email || row.EMAIL || ''
+              })).filter(item => item.name !== '' && item.certId !== '');
+
+              if(formattedData.length === 0) {
+                  setIsImportingModal(false);
+                  return alert("Tidak ada data valid yang ditemukan dalam file Excel. Pastikan kolom bernama: Nama, NomorSertifikat, Email");
+              }
+
+              const batch = writeBatch(db);
+              const newParticipantsDisplay = [];
+              const newParticipantIds = [];
+
+              // Buat referensi batch untuk masing-masing peserta baru
+              formattedData.forEach(p => {
+                  const pRef = doc(collection(db, "participants"));
+                  batch.set(pRef, { 
+                      eventId: manageEvent.id, 
+                      name: p.name, 
+                      certId: p.certId,
+                      email: p.email || '', 
+                      status: 'verified' 
+                  });
+                  newParticipantsDisplay.push({ id: pRef.id, eventId: manageEvent.id, name: p.name, certId: p.certId, email: p.email || '', status: 'verified' });
+                  newParticipantIds.push(pRef.id);
+              });
+
+              // Eksekusi penulisan ke database
+              await batch.commit();
+
+              // Update data di state React
+              setEventParticipants(prev => [...prev, ...newParticipantsDisplay]);
+              setSelectedParticipants(prev => [...prev, ...newParticipantIds]);
+
+              // Update jumlah peserta di data acara
+              await updateDoc(doc(db, "events", manageEvent.id), {
+                  participantCount: eventParticipants.length + formattedData.length
+              });
+              
+              fetchData();
+              alert(`${formattedData.length} data peserta berhasil diimpor dan disimpan!`);
+
+          } catch (error) {
+              console.error(error);
+              alert("Terjadi kesalahan saat memproses file Excel.");
+          }
+          setIsImportingModal(false);
+      };
+      
+      reader.readAsBinaryString(file);
+      e.target.value = null; // Reset input agar bisa upload file yang sama lagi jika perlu
+  };
+
   const saveParticipantEdit = async (id) => {
       try {
           await updateDoc(doc(db, "participants", id), partEditForm);
           setEventParticipants(prev => prev.map(p => p.id === id ? { ...p, ...partEditForm } : p));
           setEditingPartId(null);
+          alert("Data peserta berhasil diperbarui!");
       } catch (err) {
           console.error(err);
           alert("Gagal memperbarui data peserta.");
@@ -345,7 +423,7 @@ export default function AdminCertificates() {
                   pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
                   failCount++;
               }
-              await new Promise(resolve => setTimeout(resolve, 1000)); 
+              await new Promise(resolve => setTimeout(resolve, 4000)); 
           } else {
               pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
               failCount++; 
@@ -536,9 +614,10 @@ export default function AdminCertificates() {
             </form>
         )}
 
+        {/* MODAL KELOLA PESERTA DAN CHECKBOX GENERATE */}
         {manageEvent && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                         <div>
                             <h3 className="font-black text-lg text-slate-900">Kelola Peserta & Kirim Sertifikat</h3>
@@ -547,8 +626,9 @@ export default function AdminCertificates() {
                         <button onClick={() => setManageEvent(null)} className="text-slate-400 hover:text-red-500 font-bold text-xl">&times;</button>
                     </div>
                     
-                    <div className="px-6 py-4 bg-white border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="text-sm font-bold text-slate-600 flex items-center gap-2">
+                    {/* Panel Aksi Generate Email, Tambah Peserta Manual, & Import Excel */}
+                    <div className="px-6 py-4 bg-white border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="text-sm font-bold text-slate-600 flex items-center gap-2 w-full md:w-auto">
                            <input type="checkbox" id="selectAll" className="w-4 h-4 cursor-pointer" 
                                checked={selectedParticipants.length === eventParticipants.length && eventParticipants.length > 0} 
                                onChange={handleSelectAll} 
@@ -556,18 +636,22 @@ export default function AdminCertificates() {
                            <label htmlFor="selectAll" className="cursor-pointer">Pilih Semua ({selectedParticipants.length} Terpilih)</label>
                         </div>
                         
-                        <div className="flex gap-2 w-full sm:w-auto">
+                        <div className="flex flex-wrap justify-end gap-2 w-full md:w-auto">
                             <button 
                                 onClick={() => setIsAddingParticipant(true)} 
-                                disabled={isDownloading || isAddingParticipant}
-                                className="w-full sm:w-auto px-4 py-3 bg-emerald-50 text-emerald-700 rounded-md text-xs font-bold hover:bg-emerald-600 hover:text-white transition disabled:opacity-50"
+                                disabled={isDownloading || isAddingParticipant || isImportingModal}
+                                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-200 transition disabled:opacity-50"
                             >
                                 ➕ Tambah Manual
                             </button>
+                            <label className={`px-4 py-2.5 bg-emerald-50 text-emerald-700 rounded-md text-xs font-bold transition flex items-center gap-1 cursor-pointer hover:bg-emerald-100 ${(isDownloading || isImportingModal) ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}>
+                                📤 {isImportingModal ? 'Memproses...' : 'Import Excel'}
+                                <input type="file" accept=".xlsx" onChange={handleImportExcelModal} className="hidden" disabled={isDownloading || isImportingModal} />
+                            </label>
                             <button 
                                 onClick={handleBatchGenerateAndSend} 
-                                disabled={isDownloading || selectedParticipants.length === 0}
-                                className="w-full sm:w-auto px-6 py-3 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50 min-w-[150px]"
+                                disabled={isDownloading || selectedParticipants.length === 0 || isImportingModal}
+                                className="px-6 py-2.5 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50 min-w-[150px]"
                             >
                                 {isDownloading && processingEventId === manageEvent.id ? progressText : `🚀 Generate & Email`}
                             </button>
@@ -580,7 +664,7 @@ export default function AdminCertificates() {
                         ) : (
                             <div className="border border-slate-200 rounded-md bg-white overflow-hidden shadow-inner">
                                 <table className="w-full text-left text-xs border-collapse">
-                                    <thead className="bg-slate-100 sticky top-0">
+                                    <thead className="bg-slate-100 sticky top-0 shadow-sm z-10">
                                         <tr>
                                             <th className="p-3 border-b border-slate-200 w-10 text-center">#</th>
                                             <th className="p-3 border-b border-slate-200">Nama Lengkap</th>
@@ -590,6 +674,7 @@ export default function AdminCertificates() {
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        {/* Baris Tambah Peserta Baru */}
                                         {isAddingParticipant && (
                                             <tr className="border-b border-emerald-100 bg-emerald-50/50">
                                                 <td className="p-2 text-center text-emerald-600 font-bold">+</td>

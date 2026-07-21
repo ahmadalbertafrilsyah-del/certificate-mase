@@ -220,7 +220,7 @@ function DesignEditor() {
                             <Resizable width={items.qr.w} height={items.qr.h} onResize={onResize('qr')} lockAspectRatio={true}>
                                 <div className="cursor-move border border-dashed border-blue-500 bg-blue-500/10 flex flex-col items-center justify-center relative" style={{width: items.qr.w, height: items.qr.h}}>
                                     <div className="pointer-events-none flex flex-col items-center justify-center h-full w-full">
-                                        <QRCodeSVG value="https://mahatma.id/verify" size={items.qr.w} fgColor="#0f172a" imageSettings={{ src: "https://i.ibb.co.com/21s67v2h/maseid.jpg", height: items.qr.w * 0.25, width: items.qr.w * 0.25, excavate: true }} />
+                                        <QRCodeSVG value="https://mahatma.id/verify" size={items.qr.w} fgColor="#000000" imageSettings={{ src: "https://i.ibb.co.com/21s67v2h/maseid.jpg", height: items.qr.w * 0.25, width: items.qr.w * 0.25, excavate: true }} />
                                     </div>
                                 </div>
                             </Resizable>

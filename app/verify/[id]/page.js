@@ -97,7 +97,7 @@ export default function VerifyPage({ params }) {
         <QRCodeSVG
             value={qrLink}
             size={qrSize}
-            fgColor="#0f172a"
+            fgColor="#000000"
             imageSettings={{
                 src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
                 height: qrSize * 0.25,
@@ -110,10 +110,10 @@ export default function VerifyPage({ params }) {
     hiddenContainer.innerHTML = `
       <div id="cert-render-pdf" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: cover; background-repeat: no-repeat; position: relative;">
         <div style="position: absolute; left: ${config.positions.name.x}px; top: ${config.positions.name.y}px; width: ${config.positions.name.w}px; height: ${config.positions.name.h}px; display: flex; align-items: center; justify-content: ${alignName};">
-          <h2 style="font-size: ${(config.positions.name.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #0f172a; white-space: nowrap;">${data.name}</h2>
+          <h2 style="font-size: ${(config.positions.name.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #000000; white-space: nowrap;">${data.name}</h2>
         </div>
         <div style="position: absolute; left: ${config.positions.certId.x}px; top: ${config.positions.certId.y}px; width: ${config.positions.certId.w}px; height: ${config.positions.certId.h}px; display: flex; align-items: center; justify-content: ${alignCertId};">
-          <p style="font-size: ${(config.positions.certId.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${certId}</p>
+          <p style="font-size: ${(config.positions.certId.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #000000; white-space: nowrap;">${certId}</p>
         </div>
         <div style="position: absolute; left: ${config.positions.qr.x}px; top: ${config.positions.qr.y}px; width: ${config.positions.qr.w}px; height: ${config.positions.qr.h}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
            ${qrSvg}
@@ -265,7 +265,7 @@ export default function VerifyPage({ params }) {
                             <QRCodeSVG 
                                 value={`${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${certId}`} 
                                 size={design.positions.qr.w}
-                                fgColor="#0f172a"
+                                fgColor="#000000"
                                 imageSettings={{
                                     src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
                                     height: (design.positions.qr.w) * 0.25,

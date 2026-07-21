@@ -346,7 +346,7 @@ export default function AdminCertificates() {
                   <QRCodeSVG 
                       value={qrLink} 
                       size={qrSize} 
-                      fgColor="#0f172a" 
+                      fgColor="#000000" 
                       imageSettings={{ src: logoUrl, height: qrSize * 0.25, width: qrSize * 0.25, excavate: false }} 
                   />
               );
@@ -354,10 +354,10 @@ export default function AdminCertificates() {
               hiddenContainer.innerHTML = `
                   <div id="cert-render-hd-${i}" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: 100% 100%; background-repeat: no-repeat; position: relative;">
                   <div style="position: absolute; left: ${config.positions.name.x}px; top: ${config.positions.name.y}px; width: ${config.positions.name.w || 400}px; height: ${config.positions.name.h || 60}px; display: flex; align-items: center; justify-content: ${alignName};">
-                      <h2 style="font-size: ${(config.positions.name.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #0f172a; white-space: nowrap;">${p.name}</h2>
+                      <h2 style="font-size: ${(config.positions.name.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #000000; white-space: nowrap;">${p.name}</h2>
                   </div>
                   <div style="position: absolute; left: ${config.positions.certId.x}px; top: ${config.positions.certId.y}px; width: ${config.positions.certId.w || 200}px; height: ${config.positions.certId.h || 30}px; display: flex; align-items: center; justify-content: ${alignCertId};">
-                      <p style="font-size: ${(config.positions.certId.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${p.certId}</p>
+                      <p style="font-size: ${(config.positions.certId.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #000000; white-space: nowrap;">${p.certId}</p>
                   </div>
                   <div style="position: absolute; left: ${config.positions.qr.x}px; top: ${config.positions.qr.y}px; width: ${config.positions.qr.w || 120}px; height: ${config.positions.qr.h || 120}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
                       ${qrSvg}
@@ -506,7 +506,7 @@ export default function AdminCertificates() {
              <QRCodeSVG
                  value={qrLink}
                  size={qrSize}
-                 fgColor="#0f172a"
+                 fgColor="#000000"
                  imageSettings={{
                      src: logoUrl,
                      height: qrSize * 0.25,
@@ -519,10 +519,10 @@ export default function AdminCertificates() {
           hiddenContainer.innerHTML = `
             <div id="cert-render-${i}" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: 100% 100%; background-repeat: no-repeat; position: relative;">
               <div style="position: absolute; left: ${namePos.x}px; top: ${namePos.y}px; width: ${namePos.w || 400}px; height: ${namePos.h || 60}px; display: flex; align-items: center; justify-content: ${alignName};">
-                <h2 style="font-size: ${(namePos.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #0f172a; white-space: nowrap;">${p.name}</h2>
+                <h2 style="font-size: ${(namePos.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #000000; white-space: nowrap;">${p.name}</h2>
               </div>
               <div style="position: absolute; left: ${certIdPos.x}px; top: ${certIdPos.y}px; width: ${certIdPos.w || 200}px; height: ${certIdPos.h || 30}px; display: flex; align-items: center; justify-content: ${alignCertId};">
-                <p style="font-size: ${(certIdPos.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${p.certId}</p>
+                <p style="font-size: ${(certIdPos.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #000000; white-space: nowrap;">${p.certId}</p>
               </div>
               <div style="position: absolute; left: ${qrPos.x}px; top: ${qrPos.y}px; width: ${qrPos.w || 120}px; height: ${qrPos.h || 120}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
                  ${qrSvg}

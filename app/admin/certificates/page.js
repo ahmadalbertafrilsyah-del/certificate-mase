@@ -343,7 +343,7 @@ export default function AdminCertificates() {
               const qrSize = config.positions?.qr?.w || 120;
               
               const qrSvg = renderToString(
-                  <QRCodeSVG value={qrLink} size={qrSize} fgColor="#0f172a" imageSettings={{ src: "https://i.ibb.co.com/N2sxbS2k/logo.png", height: qrSize * 0.25, width: qrSize * 0.25, excavate: false }} />
+                  <QRCodeSVG value={qrLink} size={qrSize} fgColor="#0f172a" imageSettings={{ src: "https://i.ibb.co.com/21s67v2h/maseid.jpg", height: qrSize * 0.25, width: qrSize * 0.25, excavate: false }} />
               );
 
               hiddenContainer.innerHTML = `
@@ -414,7 +414,7 @@ export default function AdminCertificates() {
                       value={qrLink} 
                       size={500} 
                       fgColor="#0f172a" 
-                      imageSettings={{ src: "https://i.ibb.co.com/N2sxbS2k/logo.png", height: 125, width: 125, excavate: false }} 
+                      imageSettings={{ src: "https://i.ibb.co.com/21s67v2h/maseid.jpg", height: 125, width: 125, excavate: false }} 
                   />
               );
 

@@ -77,7 +77,7 @@ export default function CertificatePortal() {
                     <span className="text-slate-400 font-bold mr-1 text-sm md:text-base">MASE-</span>
                     <input 
                         type="text" 
-                        placeholder="202607210301001" 
+                        placeholder="202601010101001" 
                         className="w-full bg-transparent outline-none text-slate-900 font-bold placeholder:text-slate-300 text-sm md:text-base" 
                         value={searchId} 
                         onChange={(e) => setSearchId(e.target.value.replace(/^MASE-/i, ''))} 

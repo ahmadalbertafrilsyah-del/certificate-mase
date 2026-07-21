@@ -36,13 +36,10 @@ export default function AdminCertificates() {
   const [editingPartId, setEditingPartId] = useState(null);
   const [partEditForm, setPartEditForm] = useState({ name: '', certId: '', email: '' });
   
-  // Selection State for Email/Generate
+  // Selection State for Action
   const [selectedParticipants, setSelectedParticipants] = useState([]);
-
-  // States untuk Tambah Peserta Manual di Modal
   const [isAddingParticipant, setIsAddingParticipant] = useState(false);
   const [newParticipantForm, setNewParticipantForm] = useState({ name: '', certId: '', email: '' });
-  
   const [isImportingModal, setIsImportingModal] = useState(false);
 
   const fetchData = async () => {
@@ -161,7 +158,6 @@ export default function AdminCertificates() {
           const snap = await getDocs(q);
           const parts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           setEventParticipants(parts);
-          // Set checked default semua
           setSelectedParticipants(parts.map(p => p.id));
       } catch (err) {
           console.error(err);
@@ -184,7 +180,6 @@ export default function AdminCertificates() {
           });
           
           const newParticipant = { id: newRef.id, eventId: manageEvent.id, ...newParticipantForm, status: 'verified' };
-          
           setEventParticipants(prev => [...prev, newParticipant]);
           setSelectedParticipants(prev => [...prev, newRef.id]);
           
@@ -195,14 +190,12 @@ export default function AdminCertificates() {
               participantCount: eventParticipants.length + 1
           });
           fetchData(); 
-          
       } catch (err) {
           console.error(err);
           alert("Gagal menambahkan peserta.");
       }
   };
 
-  // FUNGSI BARU: Import Excel Langsung di Dalam Modal Kelola Peserta
   const handleImportExcelModal = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -225,14 +218,13 @@ export default function AdminCertificates() {
 
               if(formattedData.length === 0) {
                   setIsImportingModal(false);
-                  return alert("Tidak ada data valid yang ditemukan dalam file Excel. Pastikan kolom bernama: Nama, NomorSertifikat, Email");
+                  return alert("Tidak ada data valid yang ditemukan dalam file Excel.");
               }
 
               const batch = writeBatch(db);
               const newParticipantsDisplay = [];
               const newParticipantIds = [];
 
-              // Buat referensi batch untuk masing-masing peserta baru
               formattedData.forEach(p => {
                   const pRef = doc(collection(db, "participants"));
                   batch.set(pRef, { 
@@ -246,21 +238,17 @@ export default function AdminCertificates() {
                   newParticipantIds.push(pRef.id);
               });
 
-              // Eksekusi penulisan ke database
               await batch.commit();
 
-              // Update data di state React
               setEventParticipants(prev => [...prev, ...newParticipantsDisplay]);
               setSelectedParticipants(prev => [...prev, ...newParticipantIds]);
 
-              // Update jumlah peserta di data acara
               await updateDoc(doc(db, "events", manageEvent.id), {
                   participantCount: eventParticipants.length + formattedData.length
               });
               
               fetchData();
-              alert(`${formattedData.length} data peserta berhasil diimpor dan disimpan!`);
-
+              alert(`${formattedData.length} data peserta berhasil diimpor!`);
           } catch (error) {
               console.error(error);
               alert("Terjadi kesalahan saat memproses file Excel.");
@@ -269,7 +257,7 @@ export default function AdminCertificates() {
       };
       
       reader.readAsBinaryString(file);
-      e.target.value = null; // Reset input agar bisa upload file yang sama lagi jika perlu
+      e.target.value = null; 
   };
 
   const saveParticipantEdit = async (id) => {
@@ -277,7 +265,6 @@ export default function AdminCertificates() {
           await updateDoc(doc(db, "participants", id), partEditForm);
           setEventParticipants(prev => prev.map(p => p.id === id ? { ...p, ...partEditForm } : p));
           setEditingPartId(null);
-          alert("Data peserta berhasil diperbarui!");
       } catch (err) {
           console.error(err);
           alert("Gagal memperbarui data peserta.");
@@ -318,87 +305,179 @@ export default function AdminCertificates() {
       }
   };
 
-  const handleBatchGenerateAndSend = async () => {
-    if (!manageEvent.design || !manageEvent.design.bgUrl) {
-        return alert("Desain sertifikat belum diatur! Klik 'Kanvas Desain' terlebih dahulu.");
-    }
+  // --- FUNGSI 1: DOWNLOAD PDF HD SATU FILE ---
+  const handleDownloadPDFHD = async () => {
+      if (!manageEvent.design || !manageEvent.design.bgUrl) return alert("Desain sertifikat belum diatur!");
+      if(selectedParticipants.length === 0) return alert("Pilih minimal satu peserta untuk di-download.");
 
-    if(selectedParticipants.length === 0) {
-        return alert("Pilih minimal satu peserta untuk di-generate/diemail.");
-    }
+      setIsDownloading(true);
+      setProcessingEventId(manageEvent.id);
+
+      try {
+          const partsToProcess = eventParticipants.filter(p => selectedParticipants.includes(p.id));
+
+          const hiddenContainer = document.createElement('div');
+          hiddenContainer.style.position = 'absolute';
+          hiddenContainer.style.top = '-9999px';
+          hiddenContainer.style.left = '-9999px';
+          document.body.appendChild(hiddenContainer);
+
+          const config = manageEvent.design;
+          const isLandscape = config.orientation !== 'portrait';
+          const canvasWidth = isLandscape ? 1123 : 794;
+          const canvasHeight = isLandscape ? 794 : 1123;
+          const pdfFormat = isLandscape ? 'landscape' : 'portrait';
+          const pdfWidth = isLandscape ? 297 : 210;
+          const pdfHeight = isLandscape ? 210 : 297;
+          
+          const alignName = config.positions?.name?.align || 'center';
+          const alignCertId = config.positions?.certId?.align || 'center';
+
+          // Buat JS PDF Document Utama
+          const pdf = new jsPDF({ orientation: pdfFormat, unit: 'mm', format: 'a4' });
+
+          for (let i = 0; i < partsToProcess.length; i++) {
+              setProgressText(`Menyiapkan PDF ${i + 1} dari ${partsToProcess.length}...`);
+              const p = partsToProcess[i];
+              const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}`;
+              const qrSize = config.positions?.qr?.w || 120;
+              
+              const qrSvg = renderToString(
+                  <QRCodeSVG value={qrLink} size={qrSize} fgColor="#0f172a" imageSettings={{ src: "https://i.ibb.co.com/N2sxbS2k/logo.png", height: qrSize * 0.25, width: qrSize * 0.25, excavate: false }} />
+              );
+
+              hiddenContainer.innerHTML = `
+                  <div id="cert-render-hd-${i}" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: 100% 100%; background-repeat: no-repeat; position: relative;">
+                  <div style="position: absolute; left: ${config.positions.name.x}px; top: ${config.positions.name.y}px; width: ${config.positions.name.w || 400}px; height: ${config.positions.name.h || 60}px; display: flex; align-items: center; justify-content: ${alignName};">
+                      <h2 style="font-size: ${(config.positions.name.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #0f172a; white-space: nowrap;">${p.name}</h2>
+                  </div>
+                  <div style="position: absolute; left: ${config.positions.certId.x}px; top: ${config.positions.certId.y}px; width: ${config.positions.certId.w || 200}px; height: ${config.positions.certId.h || 30}px; display: flex; align-items: center; justify-content: ${alignCertId};">
+                      <p style="font-size: ${(config.positions.certId.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${p.certId}</p>
+                  </div>
+                  <div style="position: absolute; left: ${config.positions.qr.x}px; top: ${config.positions.qr.y}px; width: ${config.positions.qr.w || 120}px; height: ${config.positions.qr.h || 120}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                      ${qrSvg}
+                  </div>
+                  </div>
+              `;
+
+              await new Promise(resolve => setTimeout(resolve, 100)); // Beri waktu render
+              const elementToRender = document.getElementById(`cert-render-hd-${i}`);
+              
+              // Kualitas HD untuk Cetak
+              const dataUrl = await toJpeg(elementToRender, { quality: 1.0, pixelRatio: 2.5 }); 
+              
+              if (i > 0) pdf.addPage();
+              pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+          }
+
+          document.body.removeChild(hiddenContainer);
+          setProgressText('Menyimpan file PDF...');
+          
+          const safeTitle = manageEvent.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+          pdf.save(`Sertifikat_Cetak_HD_${safeTitle}.pdf`);
+          setProgressText('');
+          
+      } catch (error) {
+          console.error(error);
+          alert("Terjadi kesalahan saat memproses file PDF HD.");
+      }
+      setIsDownloading(false);
+      setProcessingEventId(null);
+  };
+
+  // --- FUNGSI 2: DOWNLOAD QR CODE JPG SEBAGAI ZIP ---
+  const handleDownloadQRZip = async () => {
+      if(selectedParticipants.length === 0) return alert("Pilih minimal satu peserta untuk men-download QR Code.");
+      
+      setIsDownloading(true);
+      setProcessingEventId(manageEvent.id);
+
+      try {
+          // Dynamic import jszip agar tidak membebani load awal
+          const JSZip = (await import('jszip')).default;
+          const zip = new JSZip();
+
+          const partsToProcess = eventParticipants.filter(p => selectedParticipants.includes(p.id));
+          const hiddenContainer = document.createElement('div');
+          hiddenContainer.style.position = 'absolute';
+          hiddenContainer.style.top = '-9999px';
+          document.body.appendChild(hiddenContainer);
+
+          for (let i = 0; i < partsToProcess.length; i++) {
+              setProgressText(`Memproses QR ${i + 1} dari ${partsToProcess.length}...`);
+              const p = partsToProcess[i];
+              const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}`;
+              
+              // Resolusi besar (500x500) khusus untuk aset QR Code cetak terpisah
+              const qrSvg = renderToString(
+                  <QRCodeSVG 
+                      value={qrLink} 
+                      size={500} 
+                      fgColor="#0f172a" 
+                      imageSettings={{ src: "https://i.ibb.co.com/N2sxbS2k/logo.png", height: 125, width: 125, excavate: false }} 
+                  />
+              );
+
+              hiddenContainer.innerHTML = `
+                  <div id="qr-render-jpg-${i}" style="width: 500px; height: 500px; background: white; padding: 20px; display: flex; justify-content: center; align-items: center;">
+                      ${qrSvg}
+                  </div>
+              `;
+
+              await new Promise(resolve => setTimeout(resolve, 50));
+              const elementToRender = document.getElementById(`qr-render-jpg-${i}`);
+              const dataUrl = await toJpeg(elementToRender, { quality: 1.0, pixelRatio: 2.0 });
+              
+              // Pisahkan format base64
+              const base64Data = dataUrl.replace(/^data:image\/jpeg;base64,/, "");
+              const safeName = p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+              
+              // Tambahkan ke dalam zip
+              zip.file(`QRCode_${safeName}_${p.certId}.jpg`, base64Data, {base64: true});
+          }
+
+          document.body.removeChild(hiddenContainer);
+          setProgressText('Membuat file ZIP...');
+
+          // Generate ZIP blob dan download
+          const content = await zip.generateAsync({type:"blob"});
+          const url = window.URL.createObjectURL(content);
+          const link = document.createElement('a');
+          const safeTitle = manageEvent.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+          
+          link.href = url;
+          link.download = `Aset_QRCode_${safeTitle}.zip`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+
+          setProgressText('');
+
+      } catch (error) {
+          console.error(error);
+          alert("Gagal membuat ZIP. Pastikan library jszip sudah terinstal.");
+      }
+      setIsDownloading(false);
+      setProcessingEventId(null);
+  };
+
+  // --- FUNGSI 3: KIRIM EMAIL NOTIFIKASI SAJA (RINGAN) ---
+  const handleBatchGenerateAndSend = async () => {
+    if (!manageEvent.design || !manageEvent.design.bgUrl) return alert("Desain sertifikat belum diatur!");
+    if(selectedParticipants.length === 0) return alert("Pilih minimal satu peserta untuk diemail.");
     
     setIsDownloading(true);
     setProcessingEventId(manageEvent.id);
 
     try {
         const partsToProcess = eventParticipants.filter(p => selectedParticipants.includes(p.id));
-
-        const hiddenContainer = document.createElement('div');
-        hiddenContainer.style.position = 'absolute';
-        hiddenContainer.style.top = '-9999px';
-        hiddenContainer.style.left = '-9999px';
-        document.body.appendChild(hiddenContainer);
-
         let successCount = 0;
         let failCount = 0;
 
         for (let i = 0; i < partsToProcess.length; i++) {
-          setProgressText(`Memproses ${i + 1} dari ${partsToProcess.length}...`);
+          setProgressText(`Mengirim Email ${i + 1} dari ${partsToProcess.length}...`);
           const p = partsToProcess[i];
-          const config = manageEvent.design;
-          const isLandscape = config.orientation !== 'portrait';
-          const canvasWidth = isLandscape ? 1123 : 794;
-          const canvasHeight = isLandscape ? 794 : 1123;
-          
-          const namePos = config.positions.name;
-          const certIdPos = config.positions.certId;
-          const qrPos = config.positions.qr;
-
-          const alignName = namePos.align || 'center';
-          const alignCertId = certIdPos.align || 'center';
-
-          const qrLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://certificate.mahatma.id'}/verify/${p.certId}`;
-          const qrSize = qrPos.w || 120;
-          
-          const qrSvg = renderToString(
-             <QRCodeSVG
-                 value={qrLink}
-                 size={qrSize}
-                 fgColor="#0f172a"
-                 imageSettings={{
-                     src: "https://i.ibb.co.com/21s67v2h/maseid.jpg",
-                     height: qrSize * 0.25,
-                     width: qrSize * 0.25,
-                     excavate: true,
-                 }}
-             />
-          );
-
-          hiddenContainer.innerHTML = `
-            <div id="cert-render-${i}" style="width: ${canvasWidth}px; height: ${canvasHeight}px; background-image: url('${config.bgUrl}'); background-size: 100% 100%; background-repeat: no-repeat; position: relative;">
-              <div style="position: absolute; left: ${namePos.x}px; top: ${namePos.y}px; width: ${namePos.w || 400}px; height: ${namePos.h || 60}px; display: flex; align-items: center; justify-content: ${alignName};">
-                <h2 style="font-size: ${(namePos.h || 60) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #0f172a; white-space: nowrap;">${p.name}</h2>
-              </div>
-              <div style="position: absolute; left: ${certIdPos.x}px; top: ${certIdPos.y}px; width: ${certIdPos.w || 200}px; height: ${certIdPos.h || 30}px; display: flex; align-items: center; justify-content: ${alignCertId};">
-                <p style="font-size: ${(certIdPos.h || 30) * 0.8}px; margin: 0; padding: 0 8px; font-weight: bold; color: #1e293b; white-space: nowrap;">${p.certId}</p>
-              </div>
-              <div style="position: absolute; left: ${qrPos.x}px; top: ${qrPos.y}px; width: ${qrPos.w || 120}px; height: ${qrPos.h || 120}px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-                 ${qrSvg}
-              </div>
-            </div>
-          `;
-
-          await new Promise(resolve => setTimeout(resolve, 50));
-
-          const elementToRender = document.getElementById(`cert-render-${i}`);
-          const dataUrl = await toJpeg(elementToRender, { quality: 0.5, pixelRatio: 1.0 }); 
-          
-          const pdfFormat = isLandscape ? 'landscape' : 'portrait';
-          const pdfWidth = isLandscape ? 297 : 210;
-          const pdfHeight = isLandscape ? 210 : 297;
-          
-          const pdf = new jsPDF({ orientation: pdfFormat, unit: 'mm', format: 'a4' });
-          pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
 
           if (p.email) {
               try {
@@ -413,30 +492,23 @@ export default function AdminCertificates() {
                       })
                   });
 
-                  if (response.ok) {
-                      successCount++;
-                  } else {
-                      pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
-                      failCount++;
-                  }
+                  if (response.ok) successCount++;
+                  else failCount++;
               } catch (e) {
-                  pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
                   failCount++;
               }
-              await new Promise(resolve => setTimeout(resolve, 4000)); 
+              await new Promise(resolve => setTimeout(resolve, 2000)); 
           } else {
-              pdf.save(`Sertifikat_${p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
               failCount++; 
           }
         }
 
-        document.body.removeChild(hiddenContainer);
         setProgressText('');
-        alert(`Proses Selesai!\nBerhasil dikirim ke Email: ${successCount}\nDiunduh Manual (Gagal/Tidak ada Email): ${failCount}`);
+        alert(`Proses Selesai!\nBerhasil dikirim: ${successCount}\nGagal/Tidak ada Email: ${failCount}`);
         
     } catch (error) {
         console.error(error);
-        alert("Terjadi kesalahan sistem saat memproses PDF.");
+        alert("Terjadi kesalahan sistem saat mengirim email.");
     }
     setIsDownloading(false);
     setProcessingEventId(null);
@@ -487,7 +559,7 @@ export default function AdminCertificates() {
                                             title="Kelola Peserta"
                                             className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-md text-xs font-bold hover:bg-emerald-600 hover:text-white transition"
                                         >
-                                            👥 Peserta & Generate
+                                            👥 Kelola Data
                                         </button>
                                         <Link href={`/admin/certificates/design?eventId=${ev.id}`} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-200 transition">
                                             Kanvas Desain
@@ -614,19 +686,19 @@ export default function AdminCertificates() {
             </form>
         )}
 
-        {/* MODAL KELOLA PESERTA DAN CHECKBOX GENERATE */}
+        {/* MODAL KELOLA PESERTA */}
         {manageEvent && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                         <div>
-                            <h3 className="font-black text-lg text-slate-900">Kelola Peserta & Kirim Sertifikat</h3>
+                            <h3 className="font-black text-lg text-slate-900">Kelola & Aksi Peserta</h3>
                             <p className="text-xs text-slate-500 mt-1">Acara: {manageEvent.name}</p>
                         </div>
                         <button onClick={() => setManageEvent(null)} className="text-slate-400 hover:text-red-500 font-bold text-xl">&times;</button>
                     </div>
                     
-                    {/* Panel Aksi Generate Email, Tambah Peserta Manual, & Import Excel */}
+                    {/* Panel Aksi Lengkap */}
                     <div className="px-6 py-4 bg-white border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
                         <div className="text-sm font-bold text-slate-600 flex items-center gap-2 w-full md:w-auto">
                            <input type="checkbox" id="selectAll" className="w-4 h-4 cursor-pointer" 
@@ -648,10 +720,29 @@ export default function AdminCertificates() {
                                 📤 {isImportingModal ? 'Memproses...' : 'Import Excel'}
                                 <input type="file" accept=".xlsx" onChange={handleImportExcelModal} className="hidden" disabled={isDownloading || isImportingModal} />
                             </label>
+
+                            {/* Tombol Aksi Download & Generate */}
+                            <button 
+                                onClick={handleDownloadPDFHD} 
+                                disabled={isDownloading || selectedParticipants.length === 0 || isImportingModal}
+                                className="px-4 py-2.5 bg-orange-50 text-orange-700 rounded-md text-xs font-bold hover:bg-orange-600 hover:text-white transition disabled:opacity-50"
+                                title="Download jadi 1 file PDF kualitas HD untuk cetak"
+                            >
+                                🖨️ Cetak PDF (HD)
+                            </button>
+                            <button 
+                                onClick={handleDownloadQRZip} 
+                                disabled={isDownloading || selectedParticipants.length === 0 || isImportingModal}
+                                className="px-4 py-2.5 bg-teal-50 text-teal-700 rounded-md text-xs font-bold hover:bg-teal-600 hover:text-white transition disabled:opacity-50"
+                                title="Download semua QR Code dalam file ZIP"
+                            >
+                                🔲 Download QR (ZIP)
+                            </button>
                             <button 
                                 onClick={handleBatchGenerateAndSend} 
                                 disabled={isDownloading || selectedParticipants.length === 0 || isImportingModal}
                                 className="px-6 py-2.5 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition disabled:opacity-50 min-w-[150px]"
+                                title="Kirim email notifikasi sertifikat"
                             >
                                 {isDownloading && processingEventId === manageEvent.id ? progressText : `🚀 Generate & Email`}
                             </button>
